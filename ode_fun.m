@@ -5,18 +5,17 @@
 % end
 
 function dx = ode_fun(t, x)
+    x = x(1:end-1); % remove the flag
+    caught = 0; % indicates if any pursuer is in capture radius of evader
+    
     % Shape the state and derivative into
     % dims x num_robots matrices
-    
-    x = x(1:end-1); % remove the flag
-    caught = 0;
-    
     dims = 4;
     n = length(x)/dims;
     num_pursuers = n - 1;
-    num_evaders = 1;
+    num_evaders = 1; % hard coded 1 evader for now
     
-    % define velocity and accel maximums
+    % TODO: define velocity and accel maximums
     vmax = 2; % tune these
     amax = 10;
    
@@ -31,7 +30,7 @@ function dx = ode_fun(t, x)
             if i ~= j
                 x2 = X(1:2, j);
 
-                % Consider each poossible evader, pursuer pairing
+                % Consider each possible evader, pursuer pairing
                 if i <= num_evaders 
                     % Evader, evader
                     if j <= num_evaders
@@ -39,7 +38,7 @@ function dx = ode_fun(t, x)
                     % Evader, pursuer
                     else 
                         r = norm(x2-x1);
-                        if r <= 0.1 % capture radius
+                        if r <= 0.1 % check if pursuer is within capture radius
                             caught = 1;
                         end
                         forces(:, i) = forces(:, i) + evader_pursuer_force(x1, x2);
@@ -62,7 +61,7 @@ function dx = ode_fun(t, x)
     dX(1:2, :) = X(3:4, :); % Change position by the velocity
     dX(3:4, :) = forces; % Change velocity by the force, assume m = 1 for all robots
     
-    % Limit accels and vels
+    % TODO: Limit acceleration and velocities
     for i = 1:n
         % check velocities
         vnorm = norm(dX(1:2,i));
