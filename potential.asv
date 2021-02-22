@@ -5,11 +5,10 @@ clear all; close all; clc;
 n = 5;
 dim = 4;
        
-tspan = [0 50];
+tspan = [0 100];
 % x0 = [0; 0; 0; 0; -4; -4; 0; 0; 4; 4; 0; 0; 4.5; -4; 0; 0; -4; 4; 0; 0; 0]; 
 x0 = 5*rand([n*4,1]);
-x0(3:4:end) = 0;
-x0(4:4:end) = 0;
+x0 = x0[3:4:n] 
 x0 = [x0; 0];
 
 Opt = odeset('Events', @termEvent);
