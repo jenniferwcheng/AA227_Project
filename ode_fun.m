@@ -1,3 +1,59 @@
+function [capture_time] = start_sim(num_evaders, num_pursuers)
+     x0 = rand(num_evaders*4+num_pursuers*4,1);
+     [t, x] = ode23(@ode_fun,x0)
+     capture_time = t(end)
+end
+
+function dx = ode_fun(t, x)
+    % Shape the state and derivative into
+    % dims x num_robots matrices
+    
+    dims = 4
+    n = length(x)/dims
+    num_pursuers = n - 1;
+    num_evaders = 1;
+   
+    X = reshape(x, dims, n)
+    forces = zeros(dims/2, n)
+    
+    % Calculate the force for the ith robot
+    for i = 1:n
+        x1 = X(i, :)
+        % Account for force from any other robot
+        for j = 1:n
+            x2 = X(j, :)
+            
+            % Consider each poossible evader, pursuer pairing
+            if i <= num_evaders
+                % Evader, evader
+                if j <= num_evaders
+                    forces(i, :) = forces(i, :) + evader_evader_force(x1, x2)
+                % Evader, pursuer
+                else 
+                    forces(i, :) = forces(i, :) + evader_pursuer_force(x1, x2)
+                end            
+            else
+                % Pursuer, evader
+                if j <= num_evaders
+                    forces(i, :) = forces(i , :) + pursuer_evader_force(x1, x2)
+                % Pursuer, pursuer
+                else
+                    forces(i, :) = forces(i, :) + pursuer_pursuer_force(x1, x2)
+                end
+            end
+        end
+    end
+    
+    % Return the vectorized version of the derivative
+    dX = zeros(dims, n)
+    dX(1:2, :) = X(3:4, :) % Change position by the velocity
+    dX(3:4, :) = forces % Change velocity by the force, assume m = 1 for all robots
+    
+    % Reshape into a vector 
+    dx = dX(:)
+end
+
+% 
 function dx = ode_fun(t,x)   
     % x1,2 x1,2 x2,1 x2,2 ... xn,1 xn,2
     n = length(x)/2;
@@ -37,3 +93,21 @@ function dx = ode_fun(t,x)
 %     drawnow
 end
 
+% Force on pursuer at x1 given x1 is a pursuer, x2 is another pursuer
+function pursuer_pursuer_force(x1, x2)
+    
+end
+
+% Force on pursuer at x1 given x1 is a pursuer, x2 is an evader
+function pursuer_evader_force(x1, x2)
+
+end
+
+% Force on evader at x1 given x1 is an evader, x2 is a pursuer
+function evader_pursuer_force(x1, x2)
+
+end
+
+% Force on evader at x1 given x1 is an evader, x2 is an evader
+function evader_evader_force(x1, x2)
+end
