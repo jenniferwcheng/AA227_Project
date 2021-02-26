@@ -1,0 +1,76 @@
+%% simulate pursuit-evasion
+clear all; close all; clc;
+
+%----parameters-----------
+n = 5; % number of robots
+dim = 4; % order of states
+tspan = [0 50]; % sim time
+method = 0; % 0 for potential, 1 for Voronoi
+capture_radius = 0.2; % [m] (If changing this value, remember to change in termEvent.m as well)
+
+%----initial conditions------
+x0 = [0; 0; 0; 0; -4; -4; 0; 0; 4; 4; 0; 0; 5; -4; 0; 0; -4; 4; 0; 0]; % square
+
+% random positions:
+% x0 = 10*rand([n*4,1]);
+% x0(3:4:end) = 0; % zero velocity
+% x0(4:4:end) = 0; % zero acceleration
+
+%-------run ODE function---------------
+Opt = odeset('Events', @termEvent); % terminate when within capture radius
+% [t, x] = ode23(@ode_fun,tspan, x0, Opt);
+[t, x] = ode23(@(t,x) ode_fun(t,x, method),tspan, x0, Opt);
+
+%-------trajectory plot-----------------
+figure % top down view
+
+% plot each robot vs time
+for i = 1:n
+    if i == 1 % evader
+        plot(x(:,4*i-3), x(:,4*i-2), 'r', 'MarkerSize', 10) % trajectory 
+        hold on
+        plot(x(1,4*i-3), x(1,4*i-2), '.r', 'MarkerSize', 10) % initial position
+        plot(x(end,4*i-3), x(end,4*i-2), 'xr', 'MarkerSize', 10) % final position
+    else % pursuer 
+        plot(x(:,4*i-3), x(:,4*i-2), '--b', 'MarkerSize', 10) % trajectory
+        plot(x(1,4*i-3), x(1,4*i-2), '.b', 'MarkerSize', 10) % initial position
+        plot(x(end,4*i-3), x(end,4*i-2), 'xb', 'MarkerSize', 10) % final position
+    end
+end
+
+grid on
+
+% add legend and title
+title('Trajectories')
+xlabel('x1')
+ylabel('x2')
+
+%----------plot distance to evader-----------
+
+figure % distance to evader 
+for i = 2:n
+    plot(t, vecnorm(x(:,1:2) - x(:,4*i-3:4*i-2),2,2))
+    hold on
+end
+plot(t, capture_radius*ones(length(t)), 'k--')
+grid on
+
+title('Distance to Evader')
+
+xlabel('t')
+ylabel('d')
+
+%----------plot velocities----------------
+figure
+subplot(2,1,1)
+for i = 1:n
+    plot(t, x(:,4*i-1))
+    hold on
+end
+plot(t, capture_radius*ones(length(t)), 'k--')
+grid on
+
+title('Velocity Magnitude')
+
+xlabel('t')
+ylabel('V')
