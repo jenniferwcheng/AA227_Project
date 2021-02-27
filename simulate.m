@@ -9,23 +9,24 @@ dim = 4; % Order of states
 
 capture_radius = 0.2; % [m] (If changing this value, remember to change in termEvent.m as well)
 vmax = 1; % [m/s] Same for both methods? 
-amax = 0.5; % [m/s^2] 
+amax = 1; % [m/s^2] 
+grid_size = 20; % [m] size of environment (length) -> area = grid_size^2
 
-tend = 50; % [s] length of simulation time
+tend = 25; % [s] length of simulation time
 method = 0; % 0 for potential, 1 for Voronoi
 
 %----Initial conditions------
 % x0 = [0; 0; 0; 0; -4; -4; 0; 0; 4; 4; 0; 0; 5; -4; 0; 0; -4; 4; 0; 0]; % square
 
 % Random positions:
-x0 = 5*rand([n*dim,1]);
+x0 = grid_size/4*rand([n*dim,1]) - grid_size/8;
 x0(3:dim:end) = 0; % zero velocity
 x0(4:dim:end) = 0; % zero acceleration
 
 %-------Run ODE function---------------
 Opt = odeset('Events', @termEvent); % Terminate when within capture radius
 % [t, x] = ode23(@ode_fun,tspan, x0, Opt);
-[t, x] = ode23(@(t,x) ode_fun(t,x, method, vmax, amax, ne, np),[0 tend], x0, Opt);
+[t, x] = ode23(@(t,x) ode_fun(t,x, method, vmax, amax, ne, np, grid_size),[0 tend], x0, Opt);
 
 %-------Determine capture time-----------
 capture_time = t(end);
@@ -55,6 +56,8 @@ grid on
 title('Trajectories')
 xlabel('x1')
 ylabel('x2')
+xlim([-grid_size/2 grid_size/2])
+ylim([-grid_size/2 grid_size/2])
 
 %----------Plot distance to evader-----------
 
