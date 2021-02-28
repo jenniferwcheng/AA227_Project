@@ -57,6 +57,8 @@ function [dx] = potential(t,x, vmax, amax, ne, np, grid_size)
     X = reshape(x, dims, n);
     forces = zeros(dims/2, n);
     
+    nearWall = zeros(n,1);
+    
     % Calculate the force for the ith robot
     for i = 1:n
         x1 = X(1:2, i);
@@ -65,7 +67,7 @@ function [dx] = potential(t,x, vmax, amax, ne, np, grid_size)
         forces(:,i) = forces(:,i) + wall_force(x1, grid_size);
         
         if norm(forces(:,i)) ~= 0
-            continue
+            nearWall(i) = 1;
         end
         
         % Account for force from any other robot
@@ -102,29 +104,32 @@ function [dx] = potential(t,x, vmax, amax, ne, np, grid_size)
     
     % Limit acceleration and velocities
     for i = 1:n
-        % If velocities are >= max allowable, don't accelerate
-        if(abs(X(3,i)) >= vmax)
-            dX(3,i) = 0;
+        % If near wall, allowed to exceed acceleration and velocity limits to avoid hitting wall
+        if ~ne~nearWall | (nearWall & X(3,i)*dX(3,i) > 0 & X(4,i)*dX(4,i) > 0) 
+            % If velocities are >= max allowable, don't accelerate
+            if(abs(X(3,i)) >= vmax)
+                dX(3,i) = 0;
+            end
+
+            if(abs(X(4,i)) >= vmax)
+                dX(4,i) = 0;
+            end
+
+            % Method 1: If accelerations are >= max allowable, saturate
+    %         if(abs(dX(3,i)) >= amax)
+    %             dX(3,i) = amax*sign(dX(3,i));
+    %         end
+    %         
+    %         if(abs(X(4,i)) >= vmax)
+    %             dX(4,i) = amax*sign(dX(4,i));
+    %         end
+
+            % Method 2: Normalize accelerations
+%             anorm = norm(dX(3:4,i));
+%             if anorm > amax
+%                 dX(3:4,i) = dX(3:4,i)./(anorm/amax);
+%             end
         end
-        
-        if(abs(X(4,i)) >= vmax)
-            dX(4,i) = 0;
-        end
-        
-        % If accelerations are >= max allowable, saturate
-%         if(abs(dX(3,i)) >= amax)
-%             dX(3,i) = amax*sign(dX(3,i));
-%         end
-%         
-%         if(abs(X(4,i)) >= vmax)
-%             dX(4,i) = amax*sign(dX(4,i));
-%         end
-        
-        % Normalize accelerations
-%         anorm = norm(dX(3:4,i));
-%         if anorm > amax
-%             dX(3:4,i) = dX(3:4,i)./(anorm/amax);
-%         end
     end
     
     % Reshape into a vector 
@@ -141,16 +146,21 @@ end
 % Force on pursuer at x1 given x1 is a pursuer, x2 is an evader
 function [force] = pursuer_evader_force(x1, x2)
     r = x2 - x1;
-    
+   
     % tune these
-    kn = 3; % if near
-    kf = 10; % if far
+    k = 1.5;
     
-    if norm(r) > 5 % if far away, use proportional gain
-        force = kf*r;
-    else
-        force = kn/norm(r)^3*r; % use potential field if close to evader
-    end
+    force = k/norm(r)^3*r;
+    
+    % Method 2: piecewise?
+%     kn = 2; % near evader
+%     kf = 3; % far from evader
+    
+%     if norm(r) > 4 % If far from evader, use proportional gain
+%         force = kf*r;
+%     else % If close to evader, use potential field
+%         force = kn/norm(r)^3*r;
+%     end
 end
 
 % Force on evader at x1 given x1 is an evader, x2 is a pursuer
@@ -176,11 +186,11 @@ function [force] = wall_force(x1, grid_size)
     x = x1(1);
     y = x1(2);
     
-    k = 5; % Tune this
+    k = 3; % Tune this
     
     force = 0;
     
-    thres = m*0.95; % 9.5 [m]
+    thres = m*0.9; % meters away from wall
     
     % Check if close to wall
     if y > thres % Top

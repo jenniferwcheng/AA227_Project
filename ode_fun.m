@@ -56,19 +56,13 @@ function [dx] = potential(t,x, vmax, amax, ne, np, grid_size)
    
     X = reshape(x, dims, n);
     forces = zeros(dims/2, n);
-    
-    nearWall = zeros(n,1);
+    wall_forces = zeros(dims/2, n);
     
     % Calculate the force for the ith robot
     for i = 1:n
         x1 = X(1:2, i);
         
-        % Account for boundary
-        forces(:,i) = forces(:,i) + wall_force(x1, grid_size);
-        
-        if norm(forces(:,i)) ~= 0
-            nearWall(i) = 1;
-        end
+        wall_forces(:, i) = wall_force(x1, grid_size);
         
         % Account for force from any other robot
         for j = 1:n
@@ -104,33 +98,33 @@ function [dx] = potential(t,x, vmax, amax, ne, np, grid_size)
     
     % Limit acceleration and velocities
     for i = 1:n
-        % If near wall, allowed to exceed acceleration and velocity limits to avoid hitting wall
-        if ~nearWall %         if ~nearWall | (nearWall & (X(3,i)*dX(1,i) > 0) & (X(4,i)*dX(2,i) > 0)) 
-            % If velocities are >= max allowable, don't accelerate
-            if(abs(X(3,i)) >= vmax)
-                dX(3,i) = 0;
-            end
+        % If velocities are >= max allowable, don't accelerate
+        if(abs(X(3,i)) >= vmax)
+            dX(3,i) = 0;
+        end
 
-            if(abs(X(4,i)) >= vmax)
-                dX(4,i) = 0;
-            end
+        if(abs(X(4,i)) >= vmax)
+            dX(4,i) = 0;
+        end
 
-            % Method 1: If accelerations are >= max allowable, saturate
-    %         if(abs(dX(3,i)) >= amax)
-    %             dX(3,i) = amax*sign(dX(3,i));
-    %         end
-    %         
-    %         if(abs(X(4,i)) >= vmax)
-    %             dX(4,i) = amax*sign(dX(4,i));
-    %         end
+        % Method 1: If accelerations are >= max allowable, saturate
+%         if(abs(dX(3,i)) >= amax)
+%             dX(3,i) = amax*sign(dX(3,i));
+%         end
+%         
+%         if(abs(X(4,i)) >= vmax)
+%             dX(4,i) = amax*sign(dX(4,i));
+%         end
 
-            % Method 2: Normalize accelerations
-            anorm = norm(dX(3:4,i));
-            if anorm > amax
-                dX(3:4,i) = dX(3:4,i)./(anorm/amax);
-            end
+    % Method 2: Normalize accelerations
+        anorm = norm(dX(3:4,i));
+        if anorm > amax
+            dX(3:4,i) = dX(3:4,i)./(anorm/amax);
         end
     end
+    
+    % Account for boundary
+    dX(3:4, :) = dX(3:4,:) + wall_forces;
     
     % Reshape into a vector 
     dx = dX(:);
@@ -139,7 +133,7 @@ end
 % Force on pursuer at x1 given x1 is a pursuer, x2 is another pursuer
 function [force] = pursuer_pursuer_force(x1, x2)
     r = x2 - x1;
-    k = 0.1; % tune this
+    k = 0.05; % tune this
     force = -k/norm(r)^3*r;
 end
 
@@ -148,7 +142,7 @@ function [force] = pursuer_evader_force(x1, x2)
     r = x2 - x1;
    
     % tune these
-    k = 1.5;
+    k = 1;
     
     force = k/norm(r)^3*r;
     
@@ -166,7 +160,7 @@ end
 % Force on evader at x1 given x1 is an evader, x2 is a pursuer
 function [force] = evader_pursuer_force(x1, x2)
     r = x2 - x1;
-    k = 0.5; % tune this
+    k = 0.8; % tune this
     
     force = -k/norm(r)^3*r;
 end

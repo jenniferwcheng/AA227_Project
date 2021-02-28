@@ -9,7 +9,7 @@ dim = 4; % Order of states
 
 capture_radius = 0.2; % [m] (If changing this value, remember to change in termEvent.m as well)
 vmax = 1; % [m/s] Same for both methods? 
-amax = 10; % [m/s^2] 
+amax = 2; % [m/s^2] 
 grid_size = 20; % [m] size of environment (length) -> area = grid_size^2
 
 tend = 25; % [s] length of simulation time
