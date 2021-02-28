@@ -1,9 +1,10 @@
 %% Simulate pursuit-evasion
 clear all; close all; clc;
+global F; % For video
 
 %----Parameters-----------
 ne = 1; % Number of evaders
-np = 3; % Number of pursuers
+np = 2; % Number of pursuers
 n = ne + np; % Total number of robots
 dim = 4; % Order of states
 
@@ -14,6 +15,7 @@ grid_size = 20; % [m] size of environment (length) -> area = grid_size^2
 
 tend = 25; % [s] length of simulation time
 method = 0; % 0 for potential, 1 for Voronoi
+plot_flag = 0; % 1 to plot in real time and save video
 
 %----Initial conditions------
 % x0 = [0; 0; 0; 0; -4; -4; 0; 0; 4; 4; 0; 0; 5; -4; 0; 0; -4; 4; 0; 0]; % square
@@ -26,7 +28,21 @@ x0(4:dim:end) = 0; % zero acceleration
 %-------Run ODE function---------------
 Opt = odeset('Events', @termEvent); % Terminate when within capture radius
 % [t, x] = ode23(@ode_fun,tspan, x0, Opt);
-[t, x] = ode23(@(t,x) ode_fun(t,x, method, vmax, amax, ne, np, grid_size),[0 tend], x0, Opt);
+[t, x] = ode23(@(t,x) ode_fun(t,x, method, plot_flag, vmax, amax, ne, np, grid_size),[0 tend], x0, Opt);
+
+%-------Video--------------------------
+if plot_flag % Save video
+    writerObj = VideoWriter('myVideo.avi');
+    writerObj.FrameRate = 10;
+    open(writerObj);
+    % write the frames to the video
+    for i=1:length(F)
+        % convert the image to a frame
+        frame = F(i) ;    
+        writeVideo(writerObj, frame);
+    end
+    close(writerObj);
+end
 
 %-------Determine capture time-----------
 capture_time = t(end);

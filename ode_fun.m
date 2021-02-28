@@ -1,4 +1,4 @@
-function dx = ode_fun(t, x, method, vmax, amax, ne, np, grid_size)
+function dx = ode_fun(t, x, method, plot_flag, vmax, amax, ne, np, grid_size)
 % INPUTS:
     % t - current time
     % x - states
@@ -18,17 +18,25 @@ function dx = ode_fun(t, x, method, vmax, amax, ne, np, grid_size)
         dx = voronoi(t,x);
     end
     
-    % plot in real time
-    plot(x(1), x(2), '.r', 'MarkerSize', 20) % plot evader
-    hold on
-    plotx = x(5:4:end-1);
-    ploty = x(6:4:end);
-    plot(plotx,ploty, '.b', 'MarkerSize', 20) % plot pursuers
-    xlim([-grid_size/2 grid_size/2])
-    ylim([-grid_size/2 grid_size/2])
-    grid on
-    drawnow
-    hold off
+    if plot_flag
+        % plot in real time
+        plot(x(1), x(2), '.r', 'MarkerSize', 20) % plot evader
+        hold on
+        plotx = x(5:4:end-1);
+        ploty = x(6:4:end);
+        plot(plotx,ploty, '.b', 'MarkerSize', 20) % plot pursuers
+        xlim([-grid_size/2 grid_size/2])
+        ylim([-grid_size/2 grid_size/2])
+        xlabel('x1')
+        ylabel('x2')
+        title('Current Position')
+        grid on
+        drawnow
+        hold off
+
+        global F;
+        F = [F; getframe(gcf)];
+    end
 end
 
 function [dx] = voronoi(t,x)
