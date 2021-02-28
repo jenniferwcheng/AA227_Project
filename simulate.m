@@ -3,7 +3,7 @@ clear all; close all; clc;
 
 %----Parameters-----------
 ne = 1; % Number of evaders
-np = 2; % Number of pursuers
+np = 3; % Number of pursuers
 n = ne + np; % Total number of robots
 dim = 4; % Order of states
 
