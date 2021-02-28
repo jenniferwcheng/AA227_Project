@@ -3,13 +3,13 @@ clear all; close all; clc;
 
 %----Parameters-----------
 ne = 1; % Number of evaders
-np = 4; % Number of pursuers
+np = 3; % Number of pursuers
 n = ne + np; % Total number of robots
 dim = 4; % Order of states
 
 capture_radius = 0.2; % [m] (If changing this value, remember to change in termEvent.m as well)
 vmax = 1; % [m/s] Same for both methods? 
-amax = 1; % [m/s^2] 
+amax = 5; % [m/s^2] 
 grid_size = 20; % [m] size of environment (length) -> area = grid_size^2
 
 tend = 25; % [s] length of simulation time
@@ -31,7 +31,8 @@ Opt = odeset('Events', @termEvent); % Terminate when within capture radius
 %-------Determine capture time-----------
 capture_time = t(end);
 if capture_time < tend
-    disp(sprintf('Capture time: %0.5g', capture_time))
+    fprintf('Capture time: %0.5g \n', capture_time)
+    tend = capture_time;
 else
     disp("Capture not successful")
 end
@@ -56,6 +57,7 @@ grid on
 title('Trajectories')
 xlabel('x1')
 ylabel('x2')
+axis equal
 xlim([-grid_size/2 grid_size/2])
 ylim([-grid_size/2 grid_size/2])
 
@@ -87,6 +89,7 @@ xlabel('t')
 ylabel('Vx')
 grid on
 ylim(2*[-vmax,vmax])
+xlim([0,tend])
 
 subplot(2,1,2) % y velocity
 for i = 1:n
@@ -99,3 +102,4 @@ title('Y Velocities')
 xlabel('t')
 ylabel('Vy')
 ylim(2*[-vmax,vmax])
+xlim([0,tend])

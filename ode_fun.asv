@@ -11,7 +11,7 @@ function dx = ode_fun(t, x, method, vmax, amax, ne, np, grid_size)
 % OUTPUTS:
     % dx - state derivatives
 
-    % check which method to use
+    % Check which method to use
     if method == 0
         dx = potential(t,x, vmax, amax, ne, np, grid_size);
     else
@@ -19,15 +19,16 @@ function dx = ode_fun(t, x, method, vmax, amax, ne, np, grid_size)
     end
     
     % plot in real time
-    plot(x(1), x(2), '.r', 'MarkerSize', 20) % plot evader
-    hold on
-    plotx = x(5:4:end-1);
-    ploty = x(6:4:end);
-    plot(plotx,ploty, '.b', 'MarkerSize', 20) % plot pursuers
-    xlim([-20 20])
-    ylim([-20 20])
-    drawnow
-    hold off
+%     plot(x(1), x(2), '.r', 'MarkerSize', 20) % plot evader
+%     hold on
+%     plotx = x(5:4:end-1);
+%     ploty = x(6:4:end);
+%     plot(plotx,ploty, '.b', 'MarkerSize', 20) % plot pursuers
+%     xlim([-grid_size/2 grid_size/2])
+%     ylim([-grid_size/2 grid_size/2])
+%     grid on
+%     drawnow
+%     hold off
 end
 
 function [dx] = voronoi(t,x)
@@ -59,6 +60,14 @@ function [dx] = potential(t,x, vmax, amax, ne, np, grid_size)
     % Calculate the force for the ith robot
     for i = 1:n
         x1 = X(1:2, i);
+        
+        % Account for boundary
+        forces(:,i) = forces(:,i) + wall_force(x1, grid_size);
+        
+        if norm(forces(:,i)) ~= 0
+            continue
+        end
+        
         % Account for force from any other robot
         for j = 1:n
             if i ~= j 
@@ -68,18 +77,18 @@ function [dx] = potential(t,x, vmax, amax, ne, np, grid_size)
                 if i <= num_evaders 
                     % Evader, evader
                     if j <= num_evaders
-                        forces(:, i) = forces(:, i) + evader_evader_force(x1, x2) + wall_force(x1, grid_size);
+                        forces(:, i) = forces(:, i) + evader_evader_force(x1, x2);
                     % Evader, pursuer
                     else 
-                        forces(:, i) = forces(:, i) + evader_pursuer_force(x1, x2) + wall_force(x1, grid_size);
+                        forces(:, i) = forces(:, i) + evader_pursuer_force(x1, x2);
                     end            
                 else
                     % Pursuer, evader
                     if j <= num_evaders
-                        forces(:, i) = forces(:, i) + pursuer_evader_force(x1, x2) + wall_force(x1, grid_size);
+                        forces(:, i) = forces(:, i) + pursuer_evader_force(x1, x2);
                     % Pursuer, pursuer
                     else
-                        forces(:, i) = forces(:, i) + pursuer_pursuer_force(x1, x2) + wall_force(x1, grid_size);
+                        forces(:, i) = forces(:, i) + pursuer_pursuer_force(x1, x2);
                     end
                 end
             end
@@ -102,11 +111,20 @@ function [dx] = potential(t,x, vmax, amax, ne, np, grid_size)
             dX(4,i) = 0;
         end
         
+        % If accelerations are >= max allowable, saturate
+%         if(abs(dX(3,i)) >= amax)
+%             dX(3,i) = amax*sign(dX(3,i));
+%         end
+%         
+%         if(abs(X(4,i)) >= vmax)
+%             dX(4,i) = amax*sign(dX(4,i));
+%         end
+        
         % Normalize accelerations
-        anorm = norm(dX(3:4,i));
-        if anorm > amax
-            dX(3:4,i) = dX(3:4,i)./(anorm/amax);
-        end
+%         anorm = norm(dX(3:4,i));
+%         if anorm > amax
+%             dX(3:4,i) = dX(3:4,i)./(anorm/amax);
+%         end
     end
     
     % Reshape into a vector 
@@ -116,16 +134,23 @@ end
 % Force on pursuer at x1 given x1 is a pursuer, x2 is another pursuer
 function [force] = pursuer_pursuer_force(x1, x2)
     r = x2 - x1;
-    k = 0.2; % tune this
-    force = -k/norm(r)*r;
+    k = 0.1; % tune this
+    force = -k/norm(r)^3*r;
 end
 
 % Force on pursuer at x1 given x1 is a pursuer, x2 is an evader
 function [force] = pursuer_evader_force(x1, x2)
     r = x2 - x1;
-    k = 4; % tune this
     
-    force = k/norm(r)*r;
+    % tune these
+    kn = 3; % if near
+    kf = 10; % if far
+    
+    if norm(r) > 5 % if far away, use proportional gain
+        force = kf*r;
+    else
+        force = kn/norm(r)^3*r; % use potential field if close to evader
+    end
 end
 
 % Force on evader at x1 given x1 is an evader, x2 is a pursuer
@@ -133,25 +158,15 @@ function [force] = evader_pursuer_force(x1, x2)
     r = x2 - x1;
     k = 0.5; % tune this
     
-    % Evader can only see neighbors in a certain distance
-    if norm(r) <= 3
-        force = -k/norm(r)*r;
-    else
-        force = 0;
-    end
+    force = -k/norm(r)^3*r;
 end
 
 % Force on evader at x1 given x1 is an evader, x2 is an evader
 function [force] = evader_evader_force(x1, x2)
     r = x2 - x1;
-    k = 0.1; % tune this
+    k = 0; % tune this
     
-    % Evader can only see neighbors in a certain distance
-    if norm(r) <= 3
-        force = -k/norm(r)*r;
-    else
-        force = 0;
-    end
+    force = -k/norm(r)^3*r;
 end
 
 function [force] = wall_force(x1, grid_size)
@@ -161,21 +176,26 @@ function [force] = wall_force(x1, grid_size)
     x = x1(1);
     y = x1(2);
     
-    k = 2; % Tune this
+    k = 5; % Tune this
     
     force = 0;
     
+    thres = m*0.95; % 9.5 [m]
+    
     % Check if close to wall
-    if y > m/2 % Top
+    if y > thres % Top
         r = [0; m - y];
         force = force - k/norm(r)^3*r;
-    elseif y < -m/2 % Bottom
-        r = [0; -m -y];
+    end
+    if y < -thres % Bottom
+        r = [0; -m - y];
         force = force - k/norm(r)^3*r;
-    elseif x < -m/2 % Left
+    end
+    if x < -thres % Left
         r = [-m - x; 0];
         force = force - k/norm(r)^3*r;
-    if x > m/2% Right
+    end
+    if x > thres % Right
         r = [m - x; 0];
         force = force - k/norm(r)^3*r;
     end
