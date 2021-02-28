@@ -19,16 +19,16 @@ function dx = ode_fun(t, x, method, vmax, amax, ne, np, grid_size)
     end
     
     % plot in real time
-%     plot(x(1), x(2), '.r', 'MarkerSize', 20) % plot evader
-%     hold on
-%     plotx = x(5:4:end-1);
-%     ploty = x(6:4:end);
-%     plot(plotx,ploty, '.b', 'MarkerSize', 20) % plot pursuers
-%     xlim([-grid_size/2 grid_size/2])
-%     ylim([-grid_size/2 grid_size/2])
-%     grid on
-%     drawnow
-%     hold off
+    plot(x(1), x(2), '.r', 'MarkerSize', 20) % plot evader
+    hold on
+    plotx = x(5:4:end-1);
+    ploty = x(6:4:end);
+    plot(plotx,ploty, '.b', 'MarkerSize', 20) % plot pursuers
+    xlim([-grid_size/2 grid_size/2])
+    ylim([-grid_size/2 grid_size/2])
+    grid on
+    drawnow
+    hold off
 end
 
 function [dx] = voronoi(t,x)
@@ -62,7 +62,7 @@ function [dx] = potential(t,x, vmax, amax, ne, np, grid_size)
     for i = 1:n
         x1 = X(1:2, i);
         
-        wall_forces(:, i) = wall_force(x1, grid_size);
+        forces(:, i) = forces(:,i) + wall_force(x1, grid_size);
         
         % Account for force from any other robot
         for j = 1:n
@@ -99,13 +99,20 @@ function [dx] = potential(t,x, vmax, amax, ne, np, grid_size)
     % Limit acceleration and velocities
     for i = 1:n
         % If velocities are >= max allowable, don't accelerate
-        if(abs(X(3,i)) >= vmax)
+        % TODO: fix this to account for direction
+        if(X(3,i) >= vmax && dX(3,i) > 0)
+            dX(3,i) = 0;
+        elseif (X(3,i) <= -vmax && dX(3,i) < 0)
             dX(3,i) = 0;
         end
+            
 
-        if(abs(X(4,i)) >= vmax)
+        if(X(4,i) <= -vmax && dX(4,i) < 0)
+            dX(4,i) = 0;
+        elseif(X(4,i) >= vmax && dX(4,i) > 0)
             dX(4,i) = 0;
         end
+         
 
         % Method 1: If accelerations are >= max allowable, saturate
 %         if(abs(dX(3,i)) >= amax)
@@ -124,7 +131,7 @@ function [dx] = potential(t,x, vmax, amax, ne, np, grid_size)
     end
     
     % Account for boundary
-    dX(3:4, :) = dX(3:4,:) + wall_forces;
+%     dX(3:4, :) = dX(3:4,:) + wall_forces;
     
     % Reshape into a vector 
     dx = dX(:);
@@ -133,8 +140,8 @@ end
 % Force on pursuer at x1 given x1 is a pursuer, x2 is another pursuer
 function [force] = pursuer_pursuer_force(x1, x2)
     r = x2 - x1;
-    k = 0.05; % tune this
-    force = -k/norm(r)^3*r;
+    k = 0.01; % tune this
+    force = -k/norm(r)*r;
 end
 
 % Force on pursuer at x1 given x1 is a pursuer, x2 is an evader
@@ -144,7 +151,7 @@ function [force] = pursuer_evader_force(x1, x2)
     % tune these
     k = 1;
     
-    force = k/norm(r)^3*r;
+    force = k/norm(r)*r;
     
     % Method 2: piecewise?
 %     kn = 2; % near evader
@@ -162,7 +169,7 @@ function [force] = evader_pursuer_force(x1, x2)
     r = x2 - x1;
     k = 0.8; % tune this
     
-    force = -k/norm(r)^3*r;
+    force = -k/norm(r)*r;
 end
 
 % Force on evader at x1 given x1 is an evader, x2 is an evader
@@ -170,7 +177,7 @@ function [force] = evader_evader_force(x1, x2)
     r = x2 - x1;
     k = 0; % tune this
     
-    force = -k/norm(r)^3*r;
+    force = -k/norm(r)*r;
 end
 
 function [force] = wall_force(x1, grid_size)
@@ -184,7 +191,7 @@ function [force] = wall_force(x1, grid_size)
     
     force = 0;
     
-    thres = m*0.9; % meters away from wall
+    thres = m*0.9; % 1 meters away from wall
     
     % Check if close to wall
     if y > thres % Top
