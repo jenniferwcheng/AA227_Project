@@ -4,9 +4,15 @@ n = n_p + n_e;
 vmax = 1; % max velocity for pursuers and evaders
 
 % Calculate evader and pursuer velocities
-P = randi(20, [4, 2]) - 10
-u_p = pursuer_velocity(P(:, 1), P(:, 2), 1:n_p, n_p+1:n)
-u_e = evader_velocity(P(:, 1), P(:, 2), n_p+1:n)
+P = randi(20, [4, 2]) - 10;
+sqr_border = [-10, -10, 10, 10; -10, 10, 10, -10];
+[vertices, indices, xy] = VoronoiLimit(P(:, 1), P(:, 2), 'bs_ext', sqr_border',...
+    'figure', 'off');
+[newInds_Pxy, newInds_xyP] = getNewInds(P, xy);
+% inds_p = newInds == 1:n_p;
+% inds_e = find(newInds == n_p+1:n);
+u_p = pursuer_velocity(P(:, 1), P(:, 2), 1:n_p, n_p+1:n);
+u_e = evader_velocity(P(:, 1), P(:, 2), newInds(n_p+1:n));
 
 % Plot robot initial positions and Voronoi cells
 figure(1);
@@ -36,18 +42,15 @@ function u_e = evader_velocity(pos_x, pos_y, inds_e)
 % inds_e: indices in pos_x and pos_y that are evaders
 
 sqr_border = [-10, -10, 10, 10; -10, 10, 10, -10];
-[vertices, indices, ~] = VoronoiLimit(pos_x, pos_y, 'bs_ext', sqr_border');
-
-% PROBLEM WITH INDEXING - Indexes of robot positions do not match indices
-% of Voronoi cell vertices stored in the indices vector
-% VoronoiLimit outputs polygon vertices in CCW order
+[vertices, indices, xy] = VoronoiLimit(pos_x, pos_y, 'bs_ext', sqr_border',...
+    'figure', 'off');
 
 u_e = [];
 for i=inds_e
     cell_shape = polyshape(vertices(indices{i}, 1), vertices(indices{i}, 2));
     [Cvi_x, Cvi_y] = centroid(cell_shape);
     Cvi = [Cvi_x, Cvi_y];
-    xe = [pos_x(i), pos_y(i)];
+    xe = [xy(i), xy(i)];
     u_e = [u_e, ((Cvi - xe)/norm(Cvi - xe))];    
 end
 u_e = u_e';
@@ -59,11 +62,12 @@ function u_p = pursuer_velocity(pos_x, pos_y, inds_p, inds_e)
 % inds_p: indices in pos_x and pos_y that are pursuers
 
 sqr_border = [-10, -10, 10, 10; -10, 10, 10, -10];
-[vertices, indices, ~] = VoronoiLimit(pos_x, pos_y, 'bs_ext', sqr_border');
+[vertices, indices, xy] = VoronoiLimit(pos_x, pos_y, 'bs_ext', sqr_border',...
+    'figure', 'off');
 
 u_p = [];
 for i=inds_p
-    p_pos = [pos_x(i), pos_y(i)];
+    p_pos = [xy(i), xy(i)];
     neighbors_e = [];
     for j=inds_e
         s = size(intersect(indices{i}, indices{j}));
@@ -78,7 +82,7 @@ for i=inds_p
         nearest_dist = Inf;
         nearest_edge = [0,0];
         for j = neighbors_e            
-            e_pos = [pos_x(j), pos_y(j)];
+            e_pos = [xy(j), xy(j)];
             if norm(p_pos-e_pos) < nearest_dist
                 nearest_dist = norm(p_pos-e_pos);
                 nearest_edge = intersect(indices{i}, indices{j});
@@ -96,7 +100,7 @@ for i=inds_p
         nearest_dist = Inf;
         nearest_pos = [0,0];
         for j = neighbors_e            
-            e_pos = [pos_x(j), pos_y(j)];
+            e_pos = [xy(j), xy(j)];
             if norm(p_pos-e_pos) < nearest_dist
                 nearest_dist = norm(p_pos-e_pos);
                 nearest_pos = e_pos;
@@ -106,4 +110,17 @@ for i=inds_p
         u_p = [u_p; ((nearest_pos - p_pos)/norm(nearest_pos - p_pos))'];
     end
 end
+end
+
+function newInds = getNewInds(P, xy)
+
+newInds = zeros(size(P, 1), 1);
+for i=1:size(xy, 1)
+    for j=1:size(P, 1)
+        if (xy(i, :) == P(j, :))
+            newInds(i) = j;
+        end
+    end
+end
+
 end
