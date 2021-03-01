@@ -1,4 +1,4 @@
-function dx = ode_fun(t, x, method, plot_flag, vmax, amax, ne, np, grid_size)
+function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
 % INPUTS:
     % t - current time
     % x - states
@@ -18,7 +18,7 @@ function dx = ode_fun(t, x, method, plot_flag, vmax, amax, ne, np, grid_size)
         dx = voronoi(t,x);
     end
     
-    if plot_flag
+    if save_video
         % plot in real time
         plot(x(1), x(2), '.r', 'MarkerSize', 20) % plot evader
         hold on
@@ -102,7 +102,7 @@ function [dx] = potential(t,x, vmax, amax, ne, np, grid_size)
     % Return the vectorized version of the derivative
     dX = zeros(dims, n);
     dX(1:2, :) = X(3:4, :); % Change position by the velocity
-    dX(3:4, :) = forces; % Change velocity by the force, assume m = 1 for all robots
+    dX(3:4, :) = forces - 0.05*X(3:4, :); % Change velocity by the force - friction, assume m = 1 for all robots
     
     % Limit acceleration and velocities
     for i = 1:n
@@ -150,6 +150,7 @@ function [force] = pursuer_pursuer_force(x1, x2)
     r = x2 - x1;
     k = 0.01; % tune this
     force = -k/norm(r)*r;
+%     force = -k/norm(r)^3*r;
 end
 
 % Force on pursuer at x1 given x1 is a pursuer, x2 is an evader
@@ -157,10 +158,11 @@ function [force] = pursuer_evader_force(x1, x2)
     r = x2 - x1;
    
     % tune these
-    k = 1;
+    k = 0.8;
     
     force = k/norm(r)*r;
-    
+%     force = k/norm(r)^3*r;
+
     % Method 2: piecewise?
 %     kn = 2; % near evader
 %     kf = 3; % far from evader
@@ -175,9 +177,10 @@ end
 % Force on evader at x1 given x1 is an evader, x2 is a pursuer
 function [force] = evader_pursuer_force(x1, x2)
     r = x2 - x1;
-    k = 0.8; % tune this
+    k = 0.5; % tune this
     
     force = -k/norm(r)*r;
+%     force = -k/norm(r)^3*r;
 end
 
 % Force on evader at x1 given x1 is an evader, x2 is an evader
@@ -186,6 +189,7 @@ function [force] = evader_evader_force(x1, x2)
     k = 0; % tune this
     
     force = -k/norm(r)*r;
+%     force = -k/norm(r)^3*r;
 end
 
 function [force] = wall_force(x1, grid_size)
@@ -195,11 +199,11 @@ function [force] = wall_force(x1, grid_size)
     x = x1(1);
     y = x1(2);
     
-    k = 1; % Tune this
+    k = 2; % Tune this
     
     force = 0;
     
-    thres = m*0.9; % 1 meters away from wall
+    thres = m*0.85; % 1.5 meters away from wall
     
     % Check if close to wall
     if y > thres % Top
