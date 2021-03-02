@@ -15,32 +15,39 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
     if method == 0
         dx = potential(t,x, vmax, amax, ne, np, grid_size);
     else
-        dx = voronoi(t,x);
+        dx = voronoi(t,x, vmax, ne, np, grid_size);
     end
     
     if save_video
-        % plot in real time
-        plot(x(1), x(2), '.r', 'MarkerSize', 20) % plot evader
-        hold on
-        plotx = x(5:4:end-1);
-        ploty = x(6:4:end);
-        plot(plotx,ploty, '.b', 'MarkerSize', 20) % plot pursuers
-        xlim([-grid_size/2 grid_size/2])
-        ylim([-grid_size/2 grid_size/2])
-        xlabel('x1')
-        ylabel('x2')
-        title('Current Position')
-        grid on
-        drawnow
-        hold off
+        if method == 0 % Potential
+            % plot in real time
+            plot(x(1), x(2), '.r', 'MarkerSize', 20) % plot evader
+            hold on
+            plotx = x(5:4:end-1);
+            ploty = x(6:4:end);
+            plot(plotx,ploty, '.b', 'MarkerSize', 20) % plot pursuers
+            xlim([-grid_size/2 grid_size/2])
+            ylim([-grid_size/2 grid_size/2])
+            xlabel('x1')
+            ylabel('x2')
+            title('Current Position')
+            grid on
+            drawnow
+            hold off
+        else
+            % TODO: plot voronoi
+        end
 
         global F;
         F = [F; getframe(gcf)];
     end
 end
 
-function [dx] = voronoi(t,x)
+function [dx] = voronoi(t, x, vmax, ne, np, grid_size)
     % TODO: voronoi controls
+    
+    % function calls
+    % clip velocity
 end
 
 function [dx] = potential(t,x, vmax, amax, ne, np, grid_size)   
