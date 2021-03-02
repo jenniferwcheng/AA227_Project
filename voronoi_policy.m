@@ -48,7 +48,6 @@ axis equal
 xlim([-10, 10]);
 ylim([-10, 10]);
 
-%% functions
 
 function u_e = evader_velocity(vertices, indices, xy, inds_e)
     % inds_e: indices in xy that are evaders
@@ -61,6 +60,7 @@ function u_e = evader_velocity(vertices, indices, xy, inds_e)
         xe = [xy(i,1), xy(i,2)];
         u_e = [u_e, ((Cvi - xe)/norm(Cvi - xe))];  
         plot(Cvi(1), Cvi(2), 'xr', 'MarkerSize', 10)
+        hold on
     end
     u_e = u_e';
 end
@@ -96,8 +96,6 @@ function u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e)
             vertex_1 = vertices(nearest_edge(1), :);
             vertex_2 = vertices(nearest_edge(2), :);
             Cbj = .5*(vertex_1+vertex_2);
-            plot(Cbj(1), Cbj(2), 'xb', 'MarkerSize', 10)
-            hold on
             u_p = [u_p; ((Cbj - p_pos)/norm(Cbj - p_pos))'];
 
         % if the pursuer has no neighboring evaders
