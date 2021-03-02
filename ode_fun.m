@@ -199,7 +199,7 @@ function [force] = wall_force(x1, grid_size)
     x = x1(1);
     y = x1(2);
     
-    k = 2; % Tune this
+    k = 1.5; % Tune this
     
     force = 0;
     
