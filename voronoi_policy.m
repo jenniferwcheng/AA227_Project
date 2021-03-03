@@ -16,10 +16,10 @@ newInds = getNewInds(P, xy);
 inds_p = [];
 inds_e = [];
 for i = 1:n
-    if newInds(i) <= np
-        inds_p = [inds_p, i];
-    else
+    if newInds(i) <= ne
         inds_e = [inds_e, i];
+    else
+        inds_p = [inds_p, i];
     end
 end
 

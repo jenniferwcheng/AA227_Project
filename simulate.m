@@ -1,6 +1,5 @@
 %% Simulate pursuit-evasion
 clear all; close all; clc;
-global F; % For video
 
 %----Parameters-----------
 ne = 1; % Number of evaders
@@ -12,13 +11,16 @@ capture_radius = 0.2; % [m] (If changing this value, remember to change in termE
 vmax = 1; % [m/s] Same for both methods? 
 amax = 10; % [m/s^2] 
 grid_size = 20; % [m] size of environment (length) -> area = grid_size^2
+global F; % For video
 
 % Flags
-method = 0; % 0 for potential, 1 for Voronoi
+method = 1; % 0 for potential, 1 for Voronoi
 save_video = 0; % 1 to plot in real time and save video
 monte_carlo = 0; % 1 - on, 0 - off
 
-tend = 40; % [s] length of simulation time
+tend = 10; % [s] length of simulation time
+
+% Monte Carlo params
 MAX_ITERS = 250; % Iterations for Monte Carlo
 success_rate = 0; % Number of successes/MAX_ITERS
 average_capture_time = 0; % Total capture time/MAX_ITERS
@@ -61,18 +63,18 @@ else
     [t, x] = ode23(@(t,x) ode_fun(t,x, method, save_video, vmax, amax, ne, np, grid_size),[0 tend], x0, Opt);
 
     %-------Video--------------------------
-    if save_video % Save video
-        writerObj = VideoWriter('myVideo.avi');
-        writerObj.FrameRate = 10;
-        open(writerObj);
-        % write the frames to the video
-        for i=1:length(F)
-            % convert the image to a frame
-            frame = F(i) ;    
-            writeVideo(writerObj, frame);
-        end
-        close(writerObj);
-    end
+%     if save_video % Save video
+%         writerObj = VideoWriter('myVideo.avi');
+%         writerObj.FrameRate = 10;
+%         open(writerObj);
+%         % write the frames to the video
+%         for i=1:length(F)
+%             % convert the image to a frame
+%             frame = F(i) ;    
+%             writeVideo(writerObj, frame);
+%         end
+%         close(writerObj);
+%     end
 
     %-------Determine capture time-----------
     capture_time = t(end);

@@ -995,7 +995,7 @@ try
 %         export_fig([pwd,'\VoronoiLimit_example.jpg'],'-r300');
     
 catch me
-    disp('stop')
+%     disp('stop')
 end
 
 end
