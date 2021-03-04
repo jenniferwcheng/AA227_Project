@@ -3,7 +3,7 @@ clear all; close all; clc;
 
 %----Parameters-----------
 ne = 1; % Number of evaders
-np = 2; % Number of pursuers
+np = 3; % Number of pursuers
 n = ne + np; % Total number of robots
 dim = 4; % Order of states
 
@@ -15,10 +15,10 @@ global F; % For video
 
 % Flags
 method = 1; % 0 for potential, 1 for Voronoi
-save_video = 0; % 1 to plot in real time and save video
+save_video = 1; % 1 to plot in real time and save video
 monte_carlo = 0; % 1 - on, 0 - off
 
-t_end = 2; % [s] length of simulation time
+t_end = 15; % [s] length of simulation time
 
 % Monte Carlo params
 MAX_ITERS = 1000; % Iterations for Monte Carlo
@@ -60,21 +60,21 @@ if monte_carlo
     fprintf('Success rate: %0.5g \n', success_rate)
     fprintf('Average capture time: %0.5g \n', average_capture_time)
 else
-    [t, x] = ode45(@(t,x) ode_fun(t,x, method, save_video, vmax, amax, ne, np, grid_size),[0 t_end], x0, Opt);
+    [t, x] = ode23(@(t,x) ode_fun(t,x, method, save_video, vmax, amax, ne, np, grid_size),[0 t_end], x0, Opt);
 
     %-------Video--------------------------
-%     if save_video % Save video
-%         writerObj = VideoWriter('myVideo.avi');
-%         writerObj.FrameRate = 10;
-%         open(writerObj);
-%         % write the frames to the video
-%         for i=1:length(F)
-%             % convert the image to a frame
-%             frame = F(i) ;    
-%             writeVideo(writerObj, frame);
-%         end
-%         close(writerObj);
-%     end
+    if save_video % Save video
+        writerObj = VideoWriter('myVideo.avi');
+        writerObj.FrameRate = 10;
+        open(writerObj);
+        % write the frames to the video
+        for i=1:length(F)
+            % convert the image to a frame
+            frame = F(i) ;    
+            writeVideo(writerObj, frame);
+        end
+        close(writerObj);
+    end
 
     %-------Determine capture time-----------
     capture_time = t(end);

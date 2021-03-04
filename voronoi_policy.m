@@ -6,22 +6,29 @@ n = np + ne;
 vmax = 1; % max velocity for pursuers and evaders
 
 % Calculate bounded Voronoi cells
-P = randi(20, [n, 2]) - 10;
+P = rand(n, 2)*20 - 10;
 sqr_border = [-10, -10, 10, 10; -10, 10, 10, -10];
-[vertices, indices, xy] = VoronoiLimit(P(:, 1), P(:, 2), 'bs_ext', sqr_border','figure', 'off');
+% [vertices, indices, xy] = VoronoiLimit(P(:, 1), P(:, 2), 'bs_ext', sqr_border','figure', 'off');
+lower = [-10, -10];
+upper = [10, 10];
+[vertices, indices] = bounded_voronoi(lower, upper, P);
+xy = P;
 
-% Get new indices since VoronoiLimit swapped them around
-newInds = getNewInds(P, xy);
+% % Get new indices since VoronoiLimit swapped them around
+% newInds = getNewInds(P, xy);
+% 
+% inds_p = [];
+% inds_e = [];
+% for i = 1:n
+%     if newInds(i) <= ne
+%         inds_e = [inds_e, i];
+%     else
+%         inds_p = [inds_p, i];
+%     end
+% end
 
-inds_p = [];
-inds_e = [];
-for i = 1:n
-    if newInds(i) <= ne
-        inds_e = [inds_e, i];
-    else
-        inds_p = [inds_p, i];
-    end
-end
+inds_e = 1:ne;
+inds_p = ne+1:n;
 
 % Calculate controls
 u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e);
@@ -144,4 +151,36 @@ function newInds = getNewInds(P, xy)
             end
         end
     end
+end
+
+function points = augment_point(lower, upper, point)
+    left_point = point - 2*[point(1) - lower(1), 0];
+    right_point = point + 2*[upper(1) - point(1), 0];
+    bottom_point = point - 2*[0, point(2) - lower(2)];
+    top_point = point + 2*[0, upper(2) - point(2)];
+    points = [left_point; right_point; bottom_point; top_point];
+end
+
+function [v, c] = bounded_voronoi(lower, upper, points)
+    % Initialize the list of points
+    augmented_points = points;
+    
+    % For each point, add the four boundary points associated with it
+    for i = 1:size(points, 1)
+        point = points(i, :);
+        augment_point(lower, upper, point);
+        augmented_points = [augmented_points; augment_point(lower, upper, point)];
+    end
+    
+    % Decompose the space using the extra points then truncate to the first
+    % num_points nodes
+%     augmented_points = unique(augmented_points, 'row');
+    [v, c] = voronoin(augmented_points);
+    c = c(1:size(points, 1));
+    
+    % Plot to demonstrate that this works
+    %     voronoi(augmented_points(:, 1), augmented_points(:, 2));
+    %     hold on
+    %     plot(points(:, 1), points(:, 2), '*r');
+    %     plot([lower(1), lower(1), upper(1), upper(1)], [lower(2), upper(2), upper(2), lower(2)])
 end

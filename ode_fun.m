@@ -65,8 +65,8 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
             hold off
         end
 
-%         global F;
-%         F = [F; getframe(gcf)];
+        global F;
+        F = [F; getframe(gcf)];
     end
 %     x;
 %     dx
@@ -76,30 +76,38 @@ function [dx, inds_p, inds_e, xy, u_p, u_e] = voronoi_fun(t, x, ne, np, grid_siz
     n = ne+np;
     
     % Bound environment
-    sqr_border = grid_size/2*[-1, -1, 1, 1; -1, 1, 1, -1];
+%     sqr_border = grid_size/2*[-1, -1, 1, 1; -1, 1, 1, -1];
     px = x(1:4:end);
     py = x(2:4:end);
-    [vertices, indices, xy] = VoronoiLimit(px, py, 'bs_ext', sqr_border','figure', 'off');
+    
+    lower = [-grid_size/2, -grid_size/2];
+    upper = [grid_size/2, grid_size/2];
+    [vertices, indices] = bounded_voronoi(lower, upper, [px, py]);
+    xy = [px, py];
+%     [vertices, indices, xy] = VoronoiLimit(px, py, 'bs_ext', sqr_border','figure', 'off');
 
-    % Get new indices since VoronoiLimit swapped them around
-    newInds = getNewInds([px py], xy);
-
-    inds_p = [];
-    inds_e = [];
-    for i = 1:n
-        if newInds(i) <= ne
-            inds_e = [inds_e, i];
-        else
-            inds_p = [inds_p, i];
-        end
-    end
+%     % Get new indices since VoronoiLimit swapped them around
+%     newInds = getNewInds([px py], xy);
+% 
+%     inds_p = [];
+%     inds_e = [];
+%     for i = 1:n
+%         if newInds(i) <= ne
+%             inds_e = [inds_e, i];
+%         else
+%             inds_p = [inds_p, i];
+%         end
+%     end
+    
+    inds_e = 1:ne;
+    inds_p = ne+1:n;
 
     % Calculate controls
     u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e);
     u_e = evader_velocity(vertices, indices, xy, inds_e);
     
-    u_p = 15*u_p;
-    u_e = 10*u_e;
+%     u_p = u_p;
+%     u_e = u_e;
 
     % Convert into dx vector
     dx = zeros(4*n,1);
@@ -297,6 +305,7 @@ function u_e = evader_velocity(vertices, indices, xy, inds_e)
     % inds_e: indices in xy that are evaders
     
     u_e = [];
+    eps = 1e-2;
     
     % Find centroid for each evader cell and go towards it
     for i=inds_e
@@ -304,7 +313,7 @@ function u_e = evader_velocity(vertices, indices, xy, inds_e)
         [Cvi_x, Cvi_y] = centroid(cell_shape);
         Cvi = [Cvi_x, Cvi_y];
         xe = [xy(i,1), xy(i,2)];
-        u_e = [u_e, ((Cvi - xe)/norm(Cvi - xe))];  
+        u_e = [u_e, ((Cvi - xe)/(norm(Cvi - xe) + eps))];  
         plot(Cvi(1), Cvi(2), 'xr', 'MarkerSize', 10)
         hold on;
     end
@@ -316,6 +325,7 @@ function u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e)
     % inds_p: indices in xy that are pursuers
     
     u_p = [];
+    eps = 1e-2;
     for i=inds_p
         p_pos = xy(i,:);
         neighbors_e = [];
@@ -348,7 +358,7 @@ function u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e)
             hold on;
             plot(Cbj(1), Cbj(2), 'xb', 'MarkerSize', 10)
             hold on;
-            u_p = [u_p; ((Cbj - p_pos)/norm(Cbj - p_pos))'];
+            u_p = [u_p; ((Cbj - p_pos)/(norm(Cbj - p_pos) + eps))'];
 
         % If the pursuer has no neighboring evaders
         else
@@ -364,7 +374,7 @@ function u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e)
             end
 
             % Go directly towards it
-            u_p = [u_p; ((nearest_pos - p_pos)/norm(nearest_pos - p_pos))'];
+            u_p = [u_p; ((nearest_pos - p_pos)/(norm(nearest_pos - p_pos) + eps))'];
         end
     end
 end
@@ -379,4 +389,36 @@ function newInds = getNewInds(P, xy)
             end
         end
     end
+end
+
+function points = augment_point(lower, upper, point)
+    left_point = point - 2*[point(1) - lower(1), 0];
+    right_point = point + 2*[upper(1) - point(1), 0];
+    bottom_point = point - 2*[0, point(2) - lower(2)];
+    top_point = point + 2*[0, upper(2) - point(2)];
+    points = [left_point; right_point; bottom_point; top_point];
+end
+
+function [v, c] = bounded_voronoi(lower, upper, points)
+    % Initialize the list of points
+    augmented_points = points;
+    
+    % For each point, add the four boundary points associated with it
+    for i = 1:size(points, 1)
+        point = points(i, :);
+        augment_point(lower, upper, point);
+        augmented_points = [augmented_points; augment_point(lower, upper, point)];
+    end
+    
+    % Decompose the space using the extra points then truncate to the first
+    % num_points nodes
+%     augmented_points = unique(augmented_points, 'row');
+    [v, c] = voronoin(augmented_points);
+    c = c(1:size(points, 1));
+    
+    % Plot to demonstrate that this works
+    %     voronoi(augmented_points(:, 1), augmented_points(:, 2));
+    %     hold on
+    %     plot(points(:, 1), points(:, 2), '*r');
+    %     plot([lower(1), lower(1), upper(1), upper(1)], [lower(2), upper(2), upper(2), lower(2)])
 end
