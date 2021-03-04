@@ -19,7 +19,7 @@ global F; % For video
 
 % Flags
 method = 0; % 0 for potential, 1 for Voronoi
-save_video = 1; % 1 to plot in real time and save video
+save_video = 0; % 1 to plot in real time and save video
 monte_carlo = 0; % 1 - on, 0 - off
 
 t_end = 50; % [s] length of simulation time
