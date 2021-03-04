@@ -17,8 +17,8 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
         dx = potential_fun(t,x, vmax, amax, ne, np, grid_size);
     else
         clf;
-        [dx, inds_p, inds_e, xy, u_p, u_e] = voronoi_fun(t, x, ne, np, grid_size);
-        t
+        [dx, inds_p, inds_e, xy, u_p, u_e, aug_pts] = voronoi_fun(t, x, ne, np, grid_size);
+%         t
     end
     
     if save_video
@@ -41,8 +41,9 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
             % Plot Voronoi cells
             px = x(1:4:end);
             py = x(2:4:end);
-            [vx, vy] = voronoi(px,py);
-            plot(vx, vy, '-k');
+%             [vx, vy] = voronoi(px,py);
+            voronoi(aug_pts(:, 1), aug_pts(:, 2));
+%             plot(vx, vy, '-k');
             hold on
 
             % Plot pursuer position and velocity (blue is pursuer)
@@ -72,7 +73,8 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
 %     dx
 end
 
-function [dx, inds_p, inds_e, xy, u_p, u_e] = voronoi_fun(t, x, ne, np, grid_size)
+function [dx, inds_p, inds_e, xy, u_p, u_e, aug_pts] = ...
+    voronoi_fun(t, x, ne, np, grid_size)
     n = ne+np;
     
     % Bound environment
@@ -82,7 +84,7 @@ function [dx, inds_p, inds_e, xy, u_p, u_e] = voronoi_fun(t, x, ne, np, grid_siz
     
     lower = [-grid_size/2, -grid_size/2];
     upper = [grid_size/2, grid_size/2];
-    [vertices, indices] = bounded_voronoi(lower, upper, [px, py]);
+    [vertices, indices, aug_pts] = bounded_voronoi(lower, upper, [px, py]);
     xy = [px, py];
 %     [vertices, indices, xy] = VoronoiLimit(px, py, 'bs_ext', sqr_border','figure', 'off');
 
@@ -399,7 +401,7 @@ function points = augment_point(lower, upper, point)
     points = [left_point; right_point; bottom_point; top_point];
 end
 
-function [v, c] = bounded_voronoi(lower, upper, points)
+function [v, c, augmented_points] = bounded_voronoi(lower, upper, points)
     % Initialize the list of points
     augmented_points = points;
     

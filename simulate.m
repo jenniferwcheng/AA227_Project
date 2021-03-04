@@ -15,13 +15,13 @@ global F; % For video
 
 % Flags
 method = 1; % 0 for potential, 1 for Voronoi
-save_video = 1; % 1 to plot in real time and save video
-monte_carlo = 0; % 1 - on, 0 - off
+save_video = 0; % 1 to plot in real time and save video
+monte_carlo = 1; % 1 - on, 0 - off
 
 t_end = 15; % [s] length of simulation time
 
 % Monte Carlo params
-MAX_ITERS = 1000; % Iterations for Monte Carlo
+MAX_ITERS = 25; % Iterations for Monte Carlo
 success_rate = 0; % Number of successes/MAX_ITERS
 average_capture_time = 0; % Total capture time/MAX_ITERS
 
