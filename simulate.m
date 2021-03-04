@@ -2,23 +2,27 @@
 clear all; close all; clc;
 
 %----Parameters-----------
+global ne;
+global np;
 ne = 1; % Number of evaders
 np = 3; % Number of pursuers
 n = ne + np; % Total number of robots
 dim = 4; % Order of states
 
 capture_radius = 0.2; % [m] (If changing this value, remember to change in termEvent.m as well)
-vmax = 1; % [m/s] Same for both methods? 
+global caught; % Global variable to determine whether an evader is caught: 0 - not caught, 1 - caught
+caught = zeros(ne, 1);
+vmax = 1; % [m/s] Same for both methods
 amax = 10; % [m/s^2] 
 grid_size = 20; % [m] size of environment (length) -> area = grid_size^2
 global F; % For video
 
 % Flags
-method = 1; % 0 for potential, 1 for Voronoi
-save_video = 0; % 1 to plot in real time and save video
-monte_carlo = 1; % 1 - on, 0 - off
+method = 0; % 0 for potential, 1 for Voronoi
+save_video = 1; % 1 to plot in real time and save video
+monte_carlo = 0; % 1 - on, 0 - off
 
-t_end = 15; % [s] length of simulation time
+t_end = 50; % [s] length of simulation time
 
 % Monte Carlo params
 MAX_ITERS = 25; % Iterations for Monte Carlo
@@ -63,18 +67,18 @@ else
     [t, x] = ode23(@(t,x) ode_fun(t,x, method, save_video, vmax, amax, ne, np, grid_size),[0 t_end], x0, Opt);
 
     %-------Video--------------------------
-    if save_video % Save video
-        writerObj = VideoWriter('myVideo.avi');
-        writerObj.FrameRate = 10;
-        open(writerObj);
-        % write the frames to the video
-        for i=1:length(F)
-            % convert the image to a frame
-            frame = F(i) ;    
-            writeVideo(writerObj, frame);
-        end
-        close(writerObj);
-    end
+%     if save_video % Save video
+%         writerObj = VideoWriter('multiple_pursuers.avi');
+%         writerObj.FrameRate = 10;
+%         open(writerObj);
+%         % write the frames to the video
+%         for i=1:length(F)
+%             % convert the image to a frame
+%             frame = F(i) ;    
+%             writeVideo(writerObj, frame);
+%         end
+%         close(writerObj);
+%     end
 
     %-------Determine capture time-----------
     capture_time = t(end);
@@ -90,13 +94,13 @@ else
         fprintf('Capture radius: %0.5g \n', capture_radius)
         disp("Capture not successful")
     end
-%%
+
     %-------Trajectory plot-----------------
     close all;
     set(0,'DefaultFigureWindowStyle','docked')
     figure
     for i = 1:n
-        if i == 1 % Evader
+        if i <= ne % Evader
             plot(x(:,4*i-3), x(:,4*i-2), 'r', 'MarkerSize', 10) % Trajectory 
             hold on
             plot(x(1,4*i-3), x(1,4*i-2), '.r', 'MarkerSize', 10) % Initial position
@@ -109,8 +113,8 @@ else
     end
     grid on
     title('Trajectories')
-    xlabel('x1')
-    ylabel('x2')
+    xlabel('x1 [m]')
+    ylabel('x2 [m]')
     axis equal
     xlim([-grid_size/2 grid_size/2])
     ylim([-grid_size/2 grid_size/2])
@@ -118,17 +122,34 @@ else
     %----------Plot distance to evader-----------
 
     figure % Distance to evader 
-    for i = 2:n
-        plot(t, vecnorm(x(:,1:2) - x(:,4*i-3:4*i-2),2,2))
-        hold on
+    
+    if ne > 1
+        subplot(2,1,ne)
+        for i = 1:ne
+            subplot(2,1,i)
+            plot_color = rand(1,3);
+            for j = ne+1:n
+                plot(t, vecnorm(x(:,4*i-3:4*i-2) - x(:,4*j-3:4*j-2),2,2), 'color', plot_color)
+                hold on
+            end
+            plot(t, capture_radius*ones(length(t)), 'k--')
+            title(['Distance to Evader ', num2str(i)])
+            xlabel('Time [s]')
+            ylabel('Distance [m]')
+        end
+    else
+        for i = 2:n
+            plot(t, vecnorm(x(:,1:2) - x(:,4*i-3:4*i-2),2,2))
+            hold on
+        end
+        plot(t, capture_radius*ones(length(t)), 'k--')
+        xlabel('Time [s]')
+        ylabel('Distance [m]')
     end
-    plot(t, capture_radius*ones(length(t)), 'k--')
     grid on
 
     title('Distance to Evader')
 
-    xlabel('t')
-    ylabel('d')
 
     %----------Plot velocities----------------
     figure
