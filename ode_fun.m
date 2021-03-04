@@ -3,6 +3,7 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
     % t - current time
     % x - states
     % method - 0 for potential, 1 for Voronoi
+    % save_video - boolean save/not save video
     % vmax - maximum velocity [m/s]
     % amax - maximum acceleration [m/s^2]
     % ne - number of evaders
@@ -15,7 +16,9 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
     if method == 0
         dx = potential_fun(t,x, vmax, amax, ne, np, grid_size);
     else
+        clf;
         [dx, inds_p, inds_e, xy, u_p, u_e] = voronoi_fun(t, x, ne, np, grid_size);
+        t
     end
     
     if save_video
@@ -65,8 +68,8 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
 %         global F;
 %         F = [F; getframe(gcf)];
     end
-    x
-    dx
+%     x;
+%     dx
 end
 
 function [dx, inds_p, inds_e, xy, u_p, u_e] = voronoi_fun(t, x, ne, np, grid_size)
@@ -94,6 +97,9 @@ function [dx, inds_p, inds_e, xy, u_p, u_e] = voronoi_fun(t, x, ne, np, grid_siz
     % Calculate controls
     u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e);
     u_e = evader_velocity(vertices, indices, xy, inds_e);
+    
+    u_p = 15*u_p;
+    u_e = 10*u_e;
 
     % Convert into dx vector
     dx = zeros(4*n,1);
@@ -212,8 +218,8 @@ end
 function [force] = pursuer_pursuer_force(x1, x2)
     r = x2 - x1;
     k = 0.01; % tune this
-    force = -k/norm(r)*r;
-%     force = -k/norm(r)^3*r;
+%     force = -k/norm(r)*r;
+    force = -k/norm(r)^3*r;
 end
 
 % Force on pursuer at x1 given x1 is a pursuer, x2 is an evader
@@ -223,8 +229,8 @@ function [force] = pursuer_evader_force(x1, x2)
     % tune these
     k = 0.8;
     
-    force = k/norm(r)*r;
-%     force = k/norm(r)^3*r;
+%     force = k/norm(r)*r;
+    force = k/norm(r)^3*r;
 
     % Method 2: piecewise?
 %     kn = 2; % near evader
@@ -242,8 +248,8 @@ function [force] = evader_pursuer_force(x1, x2)
     r = x2 - x1;
     k = 0.5; % tune this
     
-    force = -k/norm(r)*r;
-%     force = -k/norm(r)^3*r;
+%     force = -k/norm(r)*r;
+    force = -k/norm(r)^3*r;
 end
 
 % Force on evader at x1 given x1 is an evader, x2 is an evader
@@ -251,8 +257,8 @@ function [force] = evader_evader_force(x1, x2)
     r = x2 - x1;
     k = 0; % tune this
     
-    force = -k/norm(r)*r;
-%     force = -k/norm(r)^3*r;
+%     force = -k/norm(r)*r;
+    force = -k/norm(r)^3*r;
 end
 
 function [force] = wall_force(x1, grid_size)
@@ -300,6 +306,7 @@ function u_e = evader_velocity(vertices, indices, xy, inds_e)
         xe = [xy(i,1), xy(i,2)];
         u_e = [u_e, ((Cvi - xe)/norm(Cvi - xe))];  
         plot(Cvi(1), Cvi(2), 'xr', 'MarkerSize', 10)
+        hold on;
     end
     u_e = u_e';
 end
@@ -315,8 +322,8 @@ function u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e)
         
         % Find neighboring evaders by checking if they have common edges
         for j=inds_e
-            s = size(intersect(indices{i}, indices{j}));
-            if (s(2) > 1)
+            s = intersect(indices{i}, indices{j});
+            if (length(s) > 1)
                 neighbors_e = [neighbors_e, j];
             end
         end
@@ -338,8 +345,9 @@ function u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e)
             vertex_1 = vertices(nearest_edge(1), :);
             vertex_2 = vertices(nearest_edge(2), :);
             Cbj = .5*(vertex_1+vertex_2);
+            hold on;
             plot(Cbj(1), Cbj(2), 'xb', 'MarkerSize', 10)
-            hold on
+            hold on;
             u_p = [u_p; ((Cbj - p_pos)/norm(Cbj - p_pos))'];
 
         % If the pursuer has no neighboring evaders

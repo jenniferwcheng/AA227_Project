@@ -3,7 +3,7 @@ clear all; close all; clc;
 
 %----Parameters-----------
 ne = 1; % Number of evaders
-np = 3; % Number of pursuers
+np = 2; % Number of pursuers
 n = ne + np; % Total number of robots
 dim = 4; % Order of states
 
@@ -18,10 +18,10 @@ method = 1; % 0 for potential, 1 for Voronoi
 save_video = 0; % 1 to plot in real time and save video
 monte_carlo = 0; % 1 - on, 0 - off
 
-tend = 10; % [s] length of simulation time
+t_end = 2; % [s] length of simulation time
 
 % Monte Carlo params
-MAX_ITERS = 250; % Iterations for Monte Carlo
+MAX_ITERS = 1000; % Iterations for Monte Carlo
 success_rate = 0; % Number of successes/MAX_ITERS
 average_capture_time = 0; % Total capture time/MAX_ITERS
 
@@ -44,8 +44,8 @@ if monte_carlo
         x0(3:dim:end) = 0; % zero velocity
         x0(4:dim:end) = 0; % zero acceleration
 
-        [t, x] = ode23(@(t,x) ode_fun(t,x, method, save_video, vmax, amax, ne, np, grid_size),[0 tend], x0, Opt);
-        if t(end) < tend
+        [t, x] = ode23(@(t,x) ode_fun(t,x, method, save_video, vmax, amax, ne, np, grid_size),[0 t_end], x0, Opt);
+        if t(end) < t_end
             success_rate = success_rate + 1;
             average_capture_time = average_capture_time + t(end);
         end
@@ -60,7 +60,7 @@ if monte_carlo
     fprintf('Success rate: %0.5g \n', success_rate)
     fprintf('Average capture time: %0.5g \n', average_capture_time)
 else
-    [t, x] = ode23(@(t,x) ode_fun(t,x, method, save_video, vmax, amax, ne, np, grid_size),[0 tend], x0, Opt);
+    [t, x] = ode45(@(t,x) ode_fun(t,x, method, save_video, vmax, amax, ne, np, grid_size),[0 t_end], x0, Opt);
 
     %-------Video--------------------------
 %     if save_video % Save video
@@ -78,19 +78,19 @@ else
 
     %-------Determine capture time-----------
     capture_time = t(end);
-    if capture_time < tend
+    if capture_time < t_end
         fprintf('Number of pursuers: %0.5g \n', np)
         fprintf('Number of evaders: %0.5g \n', ne)
         fprintf('Capture radius: %0.5g \n', capture_radius)
         fprintf('Capture time: %0.5g \n', capture_time)
-        tend = capture_time;
+        t_end = capture_time;
     else
         fprintf('Number of pursuers: %0.5g \n', np)
         fprintf('Number of evaders: %0.5g \n', ne)
         fprintf('Capture radius: %0.5g \n', capture_radius)
         disp("Capture not successful")
     end
-
+%%
     %-------Trajectory plot-----------------
     close all;
     set(0,'DefaultFigureWindowStyle','docked')
@@ -143,7 +143,7 @@ else
     ylabel('Vx')
     grid on
     ylim(2*[-vmax,vmax])
-    xlim([0,tend])
+    xlim([0,t_end])
 
     subplot(2,1,2) % y velocity
     for i = 1:n
@@ -156,5 +156,5 @@ else
     xlabel('t')
     ylabel('Vy')
     ylim(2*[-vmax,vmax])
-    xlim([0,tend])
+    xlim([0,t_end])
 end

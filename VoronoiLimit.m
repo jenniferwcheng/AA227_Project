@@ -49,53 +49,53 @@ version=[3 0 2 2];
 
 %% SETUP
 
-% USERTYPE
-[~,hostname]=system('hostname');
-user=0;
-if strcmp(hostname(1:end-1),'DESKTOP-PC4MSAH') || strcmp(hostname(1:end-1),'Sievers')
-    user=1;
-end
+% % USERTYPE
+% [~,hostname]=system('hostname');
+% user=0;
+% if strcmp(hostname(1:end-1),'DESKTOP-PC4MSAH') || strcmp(hostname(1:end-1),'Sievers')
+%     user=1;
+% end
 
 
 % DETERMINE IF A MORE RECENT VERSION OF OOT IS AVAILABLE ON THE MATHWORKS FILEEXCHANGE
-try
-    onlinedata = webread('http://se.mathworks.com/matlabcentral/fileexchange/34428-voronoilimit');
-    try_ver=1;
-catch me
-    try_ver=0;
-end
-if try_ver==1
-    try % using hardcoded version (faster)
-        ixVersion=strfind(onlinedata,'version ');
-        onlinedata=onlinedata(ixVersion+8:ixVersion+80);
-        ixsspan=strfind(onlinedata,'</span>');
-        onlinedata=onlinedata(1:ixsspan(1)-1);
-        ixsp=strfind(onlinedata,'(');
-        onlinedata=onlinedata(1:ixsp-2);
-        ixp=strfind(onlinedata,'.');
-        version_online=sum([str2double(onlinedata(1:ixp(1)-1))*1e3 str2double(onlinedata(ixp(1)+1:ixp(2)-1))*1e2  str2double(onlinedata(ixp(2)+1:ixp(3)-1))*1e1 str2double(onlinedata(ixp(3)+1:end))]);
-        version=sum([version(1)*1e3 version(2)*1e2 version(3)*1e1 version(4)]);
-        if version_online>version
-            warndlg(['NOTE: A more recent version (ver. ',num2str(version_online(1,1)),'.',num2str(version_online(1,2)),'.',num2str(version_online(1,3)),'.',num2str(version_online(1,4)),') of VoronoiLimit is now available on the mathworks fileexchange. Currently running version ',num2str(version(1,1)),'.',num2str(version(1,2)),'.',num2str(version(1,3)),'.',num2str(version(1,4))])
-            pause(2)
-        end
-    catch me
-        if user==1
-            warndlg('CRASH #1: HARDCODED version of VoronoiLimit_ver script! Update hardcoded/online script!')
-            pause(2)
-        end
-        try %download/unzip most recent script to determine online version (updated in case Mathworks has changed its website and hardcoded version crashes)
-            outfilename = websave([pwd,filesep,'Current_version_VoronoiLimit_DONOTDELETE.m'],'https://www.dropbox.com/s/daqya2vv3hh9x9d/Current_version_VoronoiLimit_DONOTDELETE.m?dl=1');
-            Current_version_VoronoiLimit_DONOTDELETE(version);
-            delete(outfilename)
-        catch me2
-            if user==1
-                warndlg('CRASH #2: ONLINE version of VoronoiLimit_ver script! Update hardcoded/online script!')
-                pause(2)
-            end
-        end
-    end
-end
+% try
+%     onlinedata = webread('http://se.mathworks.com/matlabcentral/fileexchange/34428-voronoilimit');
+%     try_ver=1;
+% catch me
+%     try_ver=0;
+% end
+% if try_ver==1
+%     try % using hardcoded version (faster)
+%         ixVersion=strfind(onlinedata,'version ');
+%         onlinedata=onlinedata(ixVersion+8:ixVersion+80);
+%         ixsspan=strfind(onlinedata,'</span>');
+%         onlinedata=onlinedata(1:ixsspan(1)-1);
+%         ixsp=strfind(onlinedata,'(');
+%         onlinedata=onlinedata(1:ixsp-2);
+%         ixp=strfind(onlinedata,'.');
+%         version_online=sum([str2double(onlinedata(1:ixp(1)-1))*1e3 str2double(onlinedata(ixp(1)+1:ixp(2)-1))*1e2  str2double(onlinedata(ixp(2)+1:ixp(3)-1))*1e1 str2double(onlinedata(ixp(3)+1:end))]);
+%         version=sum([version(1)*1e3 version(2)*1e2 version(3)*1e1 version(4)]);
+%         if version_online>version
+%             warndlg(['NOTE: A more recent version (ver. ',num2str(version_online(1,1)),'.',num2str(version_online(1,2)),'.',num2str(version_online(1,3)),'.',num2str(version_online(1,4)),') of VoronoiLimit is now available on the mathworks fileexchange. Currently running version ',num2str(version(1,1)),'.',num2str(version(1,2)),'.',num2str(version(1,3)),'.',num2str(version(1,4))])
+%             pause(2)
+%         end
+%     catch me
+%         if user==1
+%             warndlg('CRASH #1: HARDCODED version of VoronoiLimit_ver script! Update hardcoded/online script!')
+%             pause(2)
+%         end
+%         try %download/unzip most recent script to determine online version (updated in case Mathworks has changed its website and hardcoded version crashes)
+%             outfilename = websave([pwd,filesep,'Current_version_VoronoiLimit_DONOTDELETE.m'],'https://www.dropbox.com/s/daqya2vv3hh9x9d/Current_version_VoronoiLimit_DONOTDELETE.m?dl=1');
+%             Current_version_VoronoiLimit_DONOTDELETE(version);
+%             delete(outfilename)
+%         catch me2
+%             if user==1
+%                 warndlg('CRASH #2: ONLINE version of VoronoiLimit_ver script! Update hardcoded/online script!')
+%                 pause(2)
+%             end
+%         end
+%     end
+% end
 
 
 %% ALGORITHM BEGINNING
