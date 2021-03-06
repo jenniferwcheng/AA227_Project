@@ -99,6 +99,7 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
 %         global F;
 %         F = [F; getframe(gcf)];
     end
+%     t
 %     x;
 %     dx
 end
@@ -338,7 +339,7 @@ function [dx] = potential_fun(t,x, vmax, amax, ne, np, grid_size)
     % Return the vectorized version of the derivative
     dX = zeros(dims, n);
     dX(1:2, :) = X(3:4, :); % Change position by the velocity
-    dX(3:4, :) = forces - 0.5*X(3:4, :); % Change velocity by the force - friction, assume m = 1 for all robots
+    dX(3:4, :) = forces - 0.05*X(3:4, :); % Change velocity by the force - friction, assume m = 1 for all robots
     
     % Limit acceleration and velocities
     for i = 1:n
@@ -383,7 +384,8 @@ end
 % Force on pursuer at x1 given x1 is a pursuer, x2 is another pursuer
 function [force] = pursuer_pursuer_force(x1, x2)
     r = x2 - x1;
-    k = 0.01; % tune this
+    k = 1e-3; % tune this - need this to be small so that pursuers can surround evader
+    % If too small, pursuers will collide with each other
     eps = 1e-2;
     
 %     force = -k/norm(r)*r;
@@ -395,25 +397,30 @@ function [force] = pursuer_evader_force(x1, x2)
     r = x2 - x1;
    
     % tune these
-    k = 0.8;
+    k = 0.8; % the higher k is, the easier it is to catch evader
+    % doesn't really increase due to multiple pursuers
+    % Lower effect on motion than function below
     eps = 1e-2;
+    c = 0.1; % Best values are 0.1-0.5
     
 %     force = k/norm(r)*r;
-%     force = k/norm(r)^3*r;
+    force = k/(norm(r) + eps)^3*r + c*r/(norm(r) + eps);
 
     % Method 2: piecewise?
     
-    if norm(r) > 4 % If far from evader, force is proportional to distance
-        force = r;
-    else % If close to evader, use potential field
-        force = -k/(norm(r) + eps)^3*r;
+    if norm(r) > 1 % If far from evader, force is proportional to distance
+%         force = r - 3.8506;
+        force = r - 0.1;
+%         force = r;
+%     else % If close to evader, use potential field
+%         force = k/(norm(r) + eps)^3*r;
     end
 end
 
 % Force on evader at x1 given x1 is an evader, x2 is a pursuer
 function [force] = evader_pursuer_force(x1, x2)
     r = x2 - x1;
-    k = 0.5; % tune this
+    k = 0.5; % tune this - the higher this is, the harder it is to catch pursuers?
     eps = 1e-2;
     
 %     force = -k/norm(r)*r;
@@ -423,7 +430,7 @@ end
 % Force on evader at x1 given x1 is an evader, x2 is an evader
 function [force] = evader_evader_force(x1, x2)
     r = x2 - x1;
-    k = 0; % tune this
+    k = 0; % tune this - not having multiple evaders
     eps = 1e-2;
     
 %     force = -k/norm(r)*r;
@@ -437,12 +444,13 @@ function [force] = wall_force(x1, grid_size)
     x = x1(1);
     y = x1(2);
     
-    k = 1; % Tune this
+    k = 3; % Tune this - what are the effects of this?
+    % Causes very sharp turns when high
     eps = 1e-2;
     
     force = 0;
     
-    thres = m*0.85; % 1.5 meters away from wall
+    thres = m*0.7; % 1.5 meters away from wall
     
     % Check if close to wall
     if y > thres % Top
