@@ -11,114 +11,273 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
     % grid_size - size of environment [m]
 % OUTPUTS:
     % dx - state derivatives
-
+    global caught;
+    
     % Check which method to use
     if method == 0
         dx = potential_fun(t,x, vmax, amax, ne, np, grid_size);
     else
-        clf;
-        [dx, inds_p, inds_e, xy, u_p, u_e] = voronoi_fun(t, x, ne, np, grid_size);
-        t
+        [dx, inds_p, inds_e, xy, u_p, u_e, aug_pts] = voronoi_fun(t, x, ne, np, grid_size, save_video);
     end
     
+    % Plot in real time
     if save_video
-        if method == 0 % Potential
-            % plot in real time
-            plot(x(1), x(2), '.r', 'MarkerSize', 20) % plot evader
+        % Potential
+        if method == 0 
+            % Plot evader (assume only 1)
+            plot(x(1), x(2), '.r', 'MarkerSize', 20) % Evader position
             hold on
+            plot([x(1) x(1)+dx(1)], [x(2) x(2)+dx(2)], '--r') % Evader velocity
+            
+            % Extract pursuer x and y locations (assume 1 evader)
             plotx = x(5:4:end-1);
             ploty = x(6:4:end);
-            plot(plotx,ploty, '.b', 'MarkerSize', 20) % plot pursuers
+            
+            % Plot pursuers
+            for i = 1:length(plotx)
+                plot(plotx(i), ploty(i), '.b', 'MarkerSize', 20) % Pursuer locations
+                plot([plotx(i) plotx(i) + dx(4*i-3)], [ploty(i) ploty(i)+dx(4*i-2)], '--b') % Pursuer velocity
+            end
+            
             xlim([-grid_size/2 grid_size/2])
             ylim([-grid_size/2 grid_size/2])
-            xlabel('x1')
-            ylabel('x2')
+            xlabel('x1 [m]')
+            ylabel('x2 [m]')
             title('Current Position')
             grid on
             drawnow
             hold off
+        % Voronoi
         else
             % Plot Voronoi cells
             px = x(1:4:end);
             py = x(2:4:end);
-            [vx, vy] = voronoi(px,py);
-            plot(vx, vy, '-k');
+            n = ne + np;
+
+            % Remove caught evaders (don't want to plot their cells)
+            for i = 1:ne
+                if caught(i)
+                    aug_pts(i,:) = [];
+                end
+            end
+            
+            % Plot bounded Voronoi cells
+            voronoi(aug_pts(:, 1), aug_pts(:, 2), 'k');
             hold on
 
             % Plot pursuer position and velocity (blue is pursuer)
-            for i = 1:length(inds_p)
-                plot([xy(inds_p(i),1), u_p(2*i-1)+xy(inds_p(i),1)], [xy(inds_p(i),2), u_p(2*i)+xy(inds_p(i),2)], '--b');
-                plot(xy(inds_p(i),1), xy(inds_p(i),2), 'ob', 'MarkerFaceColor', 'b', 'MarkerSize', 3);
+            for i = ne+1:n
+                plot([x(4*i-3), x(4*i-3) + dx(4*i-3)], [x(4*i-2), x(4*i-2) + dx(4*i-2)], '--b');
+                plot(x(4*i-3), x(4*i-2), 'ob', 'MarkerFaceColor', 'b', 'MarkerSize', 3);
+                
+                % For single evader
+%                 plot([xy(inds_p(i),1), u_p(2*i-1)+xy(inds_p(i),1)], [xy(inds_p(i),2), u_p(2*i)+xy(inds_p(i),2)], '--b');
+%                 plot(xy(inds_p(i),1), xy(inds_p(i),2), 'ob', 'MarkerFaceColor', 'b', 'MarkerSize', 3);
             end
 
             % Plot evader position and velocity (red is evader)
-            for i = 1:length(inds_e)
-                plot([xy(inds_e(i),1), u_e(2*i-1)+xy(inds_e(i),1)], [xy(inds_e(i),2), u_e(2*i)+xy(inds_e(i),2)], '--r');
-                plot(xy(inds_e(i),1), xy(inds_e(i),2), 'or', 'MarkerFaceColor', 'r', 'MarkerSize', 3);
+            for i = 1:ne
+                plot([x(4*i-3), x(4*i-3) + dx(4*i-3)], [x(4*i-2), x(4*i-2) + dx(4*i-2)], '--r');
+                plot(x(4*i-3), x(4*i-2), 'or', 'MarkerFaceColor', 'r', 'MarkerSize', 3);
+                
+                % For single evader
+%                 plot([xy(inds_e(i),1), u_e(2*i-1)+xy(inds_e(i),1)], [xy(inds_e(i),2), u_e(2*i)+xy(inds_e(i),2)], '--r');
+%                 plot(xy(inds_e(i),1), xy(inds_e(i),2), 'or', 'MarkerFaceColor', 'r', 'MarkerSize', 3);
             end
 
             title('Robot Positions, Voronoi Cells, Velocity Directions');
             axis equal
-            xlim(grid_size/2*[-1, 1]);
-            ylim(grid_size/2*[-1, 1]);
+            xlim(grid_size/2*[-1, 1])
+            ylim(grid_size/2*[-1, 1])
+            xlabel('x1 [m]')
+            ylabel('x2 [m]')
+            grid on
             drawnow
             hold off
         end
 
-        global F;
-        F = [F; getframe(gcf)];
+%         global F;
+%         F = [F; getframe(gcf)];
     end
 %     x;
 %     dx
 end
 
-function [dx, inds_p, inds_e, xy, u_p, u_e] = voronoi_fun(t, x, ne, np, grid_size, a)
+function [dx, inds_p, inds_e, xy, u_p, u_e, aug_pts] = ...
+    voronoi_fun(t, x, ne, np, grid_size, save_video)
+    global caught;
     n = ne+np;
     
     % Bound environment
-%     sqr_border = grid_size/2*[-1, -1, 1, 1; -1, 1, 1, -1];
-    px = x(1:4:end);
+    px = x(1:4:end); % Extract x and y positions
     py = x(2:4:end);
-    
-    lower = [-grid_size/2, -grid_size/2];
-    upper = [grid_size/2, grid_size/2];
-    [vertices, indices, aug_pts] = bounded_voronoi(lower, upper, [px, py]);
     xy = [px, py];
-%     [vertices, indices, xy] = VoronoiLimit(px, py, 'bs_ext', sqr_border','figure', 'off');
-
-%     % Get new indices since VoronoiLimit swapped them around
-%     newInds = getNewInds([px py], xy);
-% 
-%     inds_p = [];
-%     inds_e = [];
-%     for i = 1:n
-%         if newInds(i) <= ne
-%             inds_e = [inds_e, i];
-%         else
-%             inds_p = [inds_p, i];
-%         end
-%     end
     
+    % Evader and pursuer indices    
     inds_e = 1:ne;
     inds_p = ne+1:n;
+    
+    % Remove caught evaders
+    for i = ne:-1:1
+        if caught(i)
+            xy(i,:) = [];
+            inds_e(:,i:end) = inds_e(i:end) - 1;
+            inds_e(:,i) = [];
+        end
+    end
+    
+    % Shift pursuer indices by number of evaders caught
+    inds_p = inds_p - sum(caught);
+    
+    lower = [-grid_size/2, -grid_size/2]; % Lower left corner
+    upper = [grid_size/2, grid_size/2]; % Upper right corner
+    
+    [vertices, indices, aug_pts] = bounded_voronoi(lower, upper, xy);
 
     % Calculate controls
-    u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e);
-    u_e = evader_velocity(vertices, indices, xy, inds_e);
+    u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e, save_video);
+    u_e = evader_velocity(vertices, indices, xy, inds_e, save_video);
     
+    % Adjust pursuer/evader speeds
 %     u_p = u_p;
 %     u_e = u_e;
 
     % Convert into dx vector
     dx = zeros(4*n,1);
+    
+    % Shift pursuer indices back in their original positions
+    inds_p = inds_p + sum(caught);
+    
+    % Put pursuer controls in correct position in dx vector
     for i = 1:np
         dx(4*inds_p(i)-3:4*inds_p(i)-2) = u_p(2*i-1:2*i);
     end
 
-    for i = 1:ne
-        dx(4*inds_e(i)-3:4*inds_e(i)-2) = u_e(2*i-1:2*i);
+    
+    % Put evader indices back in their origional positions (requires some
+    % wack indexing)
+    j = 1;
+    for i = 1:ne-sum(caught)
+        while caught(j)
+            j = j + 1;
+        end
+        dx(4*j-3:4*j-2) = u_e(2*i-1:2*i);
+        j = j + 1;
     end
 end
+
+function u_e = evader_velocity(vertices, indices, xy, inds_e, save_video)
+    % inds_e: indices in xy that are evaders
+    u_e = [];
+    eps = 1e-2;
+    
+    % Find centroid for each evader cell and go towards it
+    for i=inds_e
+        cell_shape = polyshape(vertices(indices{i}, 1), vertices(indices{i}, 2));
+        [Cvi_x, Cvi_y] = centroid(cell_shape);
+        Cvi = [Cvi_x, Cvi_y];
+        xe = [xy(i,1), xy(i,2)];
+        u_e = [u_e, ((Cvi - xe)/(norm(Cvi - xe) + eps))];  
+        if save_video
+            plot(Cvi(1), Cvi(2), 'xr', 'MarkerSize', 10)
+            hold on;
+        end
+    end
+    u_e = u_e';
+end
+
+function u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e, save_video)
+    % inds_p: indices in xy that are pursuers
+    % inds_p: indices in xy that are pursuers
+    u_p = [];
+    eps = 1e-2;
+    
+    for i=inds_p
+        p_pos = xy(i,:);
+        neighbors_e = [];
+        
+        % Find neighboring evaders by checking if they have common edges
+        for j=inds_e
+            s = intersect(indices{i}, indices{j});
+            if (length(s) > 1)
+                neighbors_e = [neighbors_e, j];
+            end
+        end
+
+        % If the pursuer has neighboring evaders
+        if (length(neighbors_e) >= 1)
+            % Find nearest one
+            nearest_dist = Inf;
+            nearest_edge = [0,0];
+            for j = neighbors_e            
+                e_pos = xy(j,:);
+                if norm(p_pos-e_pos) < nearest_dist
+                    nearest_dist = norm(p_pos-e_pos);
+                    nearest_edge = intersect(indices{i}, indices{j});
+                end
+            end
+
+            % Find center of shared edge
+            vertex_1 = vertices(nearest_edge(1), :);
+            vertex_2 = vertices(nearest_edge(2), :);
+            Cbj = .5*(vertex_1+vertex_2);
+            if save_video
+                plot(Cbj(1), Cbj(2), 'xb', 'MarkerSize', 10)
+                hold on;
+            end
+            u_p = [u_p; ((Cbj - p_pos)/(norm(Cbj - p_pos) + eps))'];
+
+        % If the pursuer has no neighboring evaders
+        else
+            % Find nearest
+            nearest_dist = Inf;
+            nearest_pos = [0,0];
+            for j = inds_e            
+                e_pos = xy(j,:);
+                if norm(p_pos-e_pos) < nearest_dist
+                    nearest_dist = norm(p_pos-e_pos);
+                    nearest_pos = e_pos;
+                end
+            end
+
+            % Go directly towards it
+            u_p = [u_p; ((nearest_pos - p_pos)/(norm(nearest_pos - p_pos) + eps))'];
+        end
+    end
+end
+
+function points = augment_point(lower, upper, point)
+    % Add four points equidistant from agent to each border
+    left_point = point - 2*[point(1) - lower(1), 0];
+    right_point = point + 2*[upper(1) - point(1), 0];
+    bottom_point = point - 2*[0, point(2) - lower(2)];
+    top_point = point + 2*[0, upper(2) - point(2)];
+    points = [left_point; right_point; bottom_point; top_point];
+end
+
+function [v, c, augmented_points] = bounded_voronoi(lower, upper, points)
+    % Initialize the list of points
+    augmented_points = points;
+    
+    % For each point, add the four boundary points associated with it
+    for i = 1:size(points, 1)
+        point = points(i, :);
+        augment_point(lower, upper, point);
+        augmented_points = [augmented_points; augment_point(lower, upper, point)];
+    end
+    
+    % Decompose the space using the extra points then truncate to the first
+    % num_points nodes
+    [v, c] = voronoin(augmented_points);
+    c = c(1:size(points, 1));
+    
+    % Plot to demonstrate that this works
+    %     voronoi(augmented_points(:, 1), augmented_points(:, 2));
+    %     hold on
+    %     plot(points(:, 1), points(:, 2), '*r');
+    %     plot([lower(1), lower(1), upper(1), upper(1)], [lower(2), upper(2), upper(2), lower(2)])
+end
+
 
 function [dx] = potential_fun(t,x, vmax, amax, ne, np, grid_size)   
 % INPUTS:
@@ -179,7 +338,7 @@ function [dx] = potential_fun(t,x, vmax, amax, ne, np, grid_size)
     % Return the vectorized version of the derivative
     dX = zeros(dims, n);
     dX(1:2, :) = X(3:4, :); % Change position by the velocity
-    dX(3:4, :) = forces - 0.05*X(3:4, :); % Change velocity by the force - friction, assume m = 1 for all robots
+    dX(3:4, :) = forces - 0*X(3:4, :); % Change velocity by the force - friction, assume m = 1 for all robots
     
     % Limit acceleration and velocities
     for i = 1:n
@@ -226,8 +385,10 @@ end
 function [force] = pursuer_pursuer_force(x1, x2)
     r = x2 - x1;
     k = 0.01; % tune this
+    eps = 1e-2;
+    
 %     force = -k/norm(r)*r;
-    force = -k/norm(r)^3*r;
+    force = -k/(norm(r) + eps)^3*r;
 end
 
 % Force on pursuer at x1 given x1 is a pursuer, x2 is an evader
@@ -236,37 +397,38 @@ function [force] = pursuer_evader_force(x1, x2)
    
     % tune these
     k = 0.8;
+    eps = 1e-2
     
 %     force = k/norm(r)*r;
-    force = k/norm(r)^3*r;
+%     force = k/norm(r)^3*r;
 
     % Method 2: piecewise?
-%     kn = 2; % near evader
-%     kf = 3; % far from evader
     
-%     if norm(r) > 4 % If far from evader, use proportional gain
-%         force = kf*r;
-%     else % If close to evader, use potential field
-%         force = kn/norm(r)^3*r;
-%     end
+    if norm(r) > 4 % If far from evader, force is proportional to distance
+        force = r;
+    else % If close to evader, use potential field
+        force = -k/(norm(r) + eps)^3*r;
+    end
 end
 
 % Force on evader at x1 given x1 is an evader, x2 is a pursuer
 function [force] = evader_pursuer_force(x1, x2)
     r = x2 - x1;
     k = 0.5; % tune this
+    eps = 1e-2;
     
 %     force = -k/norm(r)*r;
-    force = -k/norm(r)^3*r;
+    force = -k/(norm(r) + eps)^3*r;
 end
 
 % Force on evader at x1 given x1 is an evader, x2 is an evader
 function [force] = evader_evader_force(x1, x2)
     r = x2 - x1;
     k = 0; % tune this
+    eps = 1e-2;
     
 %     force = -k/norm(r)*r;
-    force = -k/norm(r)^3*r;
+    force = -k/(norm(r) + eps)^3*r;
 end
 
 function [force] = wall_force(x1, grid_size)
@@ -276,7 +438,8 @@ function [force] = wall_force(x1, grid_size)
     x = x1(1);
     y = x1(2);
     
-    k = 1.5; % Tune this
+    k = 1; % Tune this
+    eps = 1e-2;
     
     force = 0;
     
@@ -285,11 +448,11 @@ function [force] = wall_force(x1, grid_size)
     % Check if close to wall
     if y > thres % Top
         r = [0; m - y];
-        force = force - k/norm(r)^3*r;
+        force = force - k/(norm(r) + eps)^3*r;
     end
     if y < -thres % Bottom
         r = [0; -m - y];
-        force = force - k/norm(r)^3*r;
+        force = force - k/(norm(r) + eps)^3*r
     end
     if x < -thres % Left
         r = [-m - x; 0];
@@ -301,124 +464,3 @@ function [force] = wall_force(x1, grid_size)
     end
 end
 
-function u_e = evader_velocity(vertices, indices, xy, inds_e)
-    % inds_e: indices in xy that are evaders
-    
-    u_e = [];
-    eps = 1e-2;
-    
-    % Find centroid for each evader cell and go towards it
-    for i=inds_e
-        cell_shape = polyshape(vertices(indices{i}, 1), vertices(indices{i}, 2));
-        [Cvi_x, Cvi_y] = centroid(cell_shape);
-        Cvi = [Cvi_x, Cvi_y];
-        xe = [xy(i,1), xy(i,2)];
-        u_e = [u_e, ((Cvi - xe)/(norm(Cvi - xe) + eps))];  
-        plot(Cvi(1), Cvi(2), 'xr', 'MarkerSize', 10)
-        hold on;
-    end
-    u_e = u_e';
-end
-
-function u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e)
-    % inds_p: indices in xy that are pursuers
-    % inds_p: indices in xy that are pursuers
-    
-    u_p = [];
-    eps = 1e-2;
-    for i=inds_p
-        p_pos = xy(i,:);
-        neighbors_e = [];
-        
-        % Find neighboring evaders by checking if they have common edges
-        for j=inds_e
-            s = intersect(indices{i}, indices{j});
-            if (length(s) > 1)
-                neighbors_e = [neighbors_e, j];
-            end
-        end
-
-        % If the pursuer has neighboring evaders
-        if (length(neighbors_e) >= 1)
-            % Find nearest one
-            nearest_dist = Inf;
-            nearest_edge = [0,0];
-            for j = neighbors_e            
-                e_pos = xy(j,:);
-                if norm(p_pos-e_pos) < nearest_dist
-                    nearest_dist = norm(p_pos-e_pos);
-                    nearest_edge = intersect(indices{i}, indices{j});
-                end
-            end
-
-            % Find center of shared edge
-            vertex_1 = vertices(nearest_edge(1), :);
-            vertex_2 = vertices(nearest_edge(2), :);
-            Cbj = .5*(vertex_1+vertex_2);
-            hold on;
-            plot(Cbj(1), Cbj(2), 'xb', 'MarkerSize', 10)
-            hold on;
-            u_p = [u_p; ((Cbj - p_pos)/(norm(Cbj - p_pos) + eps))'];
-
-        % If the pursuer has no neighboring evaders
-        else
-            % Find nearest
-            nearest_dist = Inf;
-            nearest_pos = [0,0];
-            for j = inds_e            
-                e_pos = xy(j,:);
-                if norm(p_pos-e_pos) < nearest_dist
-                    nearest_dist = norm(p_pos-e_pos);
-                    nearest_pos = e_pos;
-                end
-            end
-
-            % Go directly towards it
-            u_p = [u_p; ((nearest_pos - p_pos)/(norm(nearest_pos - p_pos) + eps))'];
-        end
-    end
-end
-
-function newInds = getNewInds(P, xy)
-    % Swap indices
-    newInds = zeros(size(P, 1), 1);
-    for i=1:size(xy, 1)
-        for j=1:size(P, 1)
-            if (xy(i, :) == P(j, :))
-                newInds(i) = j;
-            end
-        end
-    end
-end
-
-function points = augment_point(lower, upper, point)
-    left_point = point - 2*[point(1) - lower(1), 0];
-    right_point = point + 2*[upper(1) - point(1), 0];
-    bottom_point = point - 2*[0, point(2) - lower(2)];
-    top_point = point + 2*[0, upper(2) - point(2)];
-    points = [left_point; right_point; bottom_point; top_point];
-end
-
-function [v, c, augmented_points] = bounded_voronoi(lower, upper, points)
-    % Initialize the list of points
-    augmented_points = points;
-    
-    % For each point, add the four boundary points associated with it
-    for i = 1:size(points, 1)
-        point = points(i, :);
-        augment_point(lower, upper, point);
-        augmented_points = [augmented_points; augment_point(lower, upper, point)];
-    end
-    
-    % Decompose the space using the extra points then truncate to the first
-    % num_points nodes
-%     augmented_points = unique(augmented_points, 'row');
-    [v, c] = voronoin(augmented_points);
-    c = c(1:size(points, 1));
-    
-    % Plot to demonstrate that this works
-    %     voronoi(augmented_points(:, 1), augmented_points(:, 2));
-    %     hold on
-    %     plot(points(:, 1), points(:, 2), '*r');
-    %     plot([lower(1), lower(1), upper(1), upper(1)], [lower(2), upper(2), upper(2), lower(2)])
-end

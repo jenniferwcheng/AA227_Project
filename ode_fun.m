@@ -338,12 +338,11 @@ function [dx] = potential_fun(t,x, vmax, amax, ne, np, grid_size)
     % Return the vectorized version of the derivative
     dX = zeros(dims, n);
     dX(1:2, :) = X(3:4, :); % Change position by the velocity
-    dX(3:4, :) = forces - 0.05*X(3:4, :); % Change velocity by the force - friction, assume m = 1 for all robots
+    dX(3:4, :) = forces - 0.5*X(3:4, :); % Change velocity by the force - friction, assume m = 1 for all robots
     
     % Limit acceleration and velocities
     for i = 1:n
         % If velocities are >= max allowable, don't accelerate
-        % TODO: fix this to account for direction
         if(X(3,i) >= vmax && dX(3,i) > 0)
             dX(3,i) = 0;
         elseif (X(3,i) <= -vmax && dX(3,i) < 0)
@@ -384,9 +383,11 @@ end
 % Force on pursuer at x1 given x1 is a pursuer, x2 is another pursuer
 function [force] = pursuer_pursuer_force(x1, x2)
     r = x2 - x1;
-    k = 0; % tune this
+    k = 0.01; % tune this
+    eps = 1e-2;
+    
 %     force = -k/norm(r)*r;
-    force = -k/norm(r)^3*r;
+    force = -k/(norm(r) + eps)^3*r;
 end
 
 % Force on pursuer at x1 given x1 is a pursuer, x2 is an evader
@@ -395,6 +396,7 @@ function [force] = pursuer_evader_force(x1, x2)
    
     % tune these
     k = 0.8;
+    eps = 1e-2;
     
 %     force = k/norm(r)*r;
 %     force = k/norm(r)^3*r;
@@ -404,7 +406,7 @@ function [force] = pursuer_evader_force(x1, x2)
     if norm(r) > 4 % If far from evader, force is proportional to distance
         force = r;
     else % If close to evader, use potential field
-        force = k/norm(r)^3*r;
+        force = -k/(norm(r) + eps)^3*r;
     end
 end
 
@@ -412,18 +414,20 @@ end
 function [force] = evader_pursuer_force(x1, x2)
     r = x2 - x1;
     k = 0.5; % tune this
+    eps = 1e-2;
     
 %     force = -k/norm(r)*r;
-    force = -k/norm(r)^3*r;
+    force = -k/(norm(r) + eps)^3*r;
 end
 
 % Force on evader at x1 given x1 is an evader, x2 is an evader
 function [force] = evader_evader_force(x1, x2)
     r = x2 - x1;
     k = 0; % tune this
+    eps = 1e-2;
     
 %     force = -k/norm(r)*r;
-    force = -k/norm(r)^3*r;
+    force = -k/(norm(r) + eps)^3*r;
 end
 
 function [force] = wall_force(x1, grid_size)
@@ -433,7 +437,8 @@ function [force] = wall_force(x1, grid_size)
     x = x1(1);
     y = x1(2);
     
-    k = 1.5; % Tune this
+    k = 1; % Tune this
+    eps = 1e-2;
     
     force = 0;
     
@@ -442,19 +447,19 @@ function [force] = wall_force(x1, grid_size)
     % Check if close to wall
     if y > thres % Top
         r = [0; m - y];
-        force = force - k/norm(r)^3*r;
+        force = force - k/(norm(r) + eps)^3*r;
     end
     if y < -thres % Bottom
         r = [0; -m - y];
-        force = force - k/norm(r)^3*r;
+        force = force - k/(norm(r) + eps)^3*r;
     end
     if x < -thres % Left
         r = [-m - x; 0];
-        force = force - k/norm(r)^3*r;
+        force = force - k/(norm(r) + eps)^3*r;
     end
     if x > thres % Right
         r = [m - x; 0];
-        force = force - k/norm(r)^3*r;
+        force = force - k/(norm(r) + eps)^3*r;
     end
 end
 
