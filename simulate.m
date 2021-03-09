@@ -18,9 +18,9 @@ grid_size = 20; % [m] size of environment (length) -> area = grid_size^2
 global F; % For video
 
 % Flags
-method = 0; % 0 for potential, 1 for Voronoi
+method = 1; % 0 for potential, 1 for Voronoi
 save_video = 0; % 1 to plot in real time and save video
-monte_carlo = 1; % 1 - on, 0 - off
+monte_carlo = 0; % 1 - on, 0 - off
 
 t_end = 60; % [s] length of simulation time
 
@@ -127,13 +127,13 @@ else
     figure % Distance to evader 
     
     if ne > 1
-        subplot(2,1,ne)
         for i = 1:ne
-            subplot(2,1,i)
+            subplot(ne,1,i)
             plot_color = rand(1,3);
             for j = ne+1:n
                 plot(t, vecnorm(x(:,4*i-3:4*i-2) - x(:,4*j-3:4*j-2),2,2), 'color', plot_color)
                 hold on
+                grid on
             end
             plot(t, capture_radius*ones(length(t)), 'k--')
             title(['Distance to Evader ', num2str(i)])
@@ -149,7 +149,6 @@ else
         xlabel('Time [s]')
         ylabel('Distance [m]')
     end
-    grid on
 
     title('Distance to Evader')
 
