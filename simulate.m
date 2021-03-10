@@ -67,11 +67,12 @@ if monte_carlo
     fprintf('Success rate: %0.5g \n', success_rate)
     fprintf('Average capture time: %0.5g \n', average_capture_time)
 else
-    [t, x] = ode23(@(t,x) ode_fun(t,x, method, save_video, vmax, amax, ne, np, grid_size),[0 t_end], x0, Opt);
+    tspan = [0 t_end];
+    [t, x] = ode23(@(t,x) ode_fun(t,x, method, save_video, vmax, amax, ne, np, grid_size),tspan, x0, Opt);
 
     %-------Video--------------------------
 %     if save_video % Save video
-%         writerObj = VideoWriter('multiple_pursuers.avi');
+%         writerObj = VideoWriter('video.avi');
 %         writerObj.FrameRate = 10;
 %         open(writerObj);
 %         % write the frames to the video
@@ -129,6 +130,8 @@ else
     if ne > 1
         for i = 1:ne
             subplot(ne,1,i)
+            plot(t, capture_radius*ones(length(t)), 'k--')
+            hold on
             plot_color = rand(1,3);
             for j = ne+1:n
                 plot(t, vecnorm(x(:,4*i-3:4*i-2) - x(:,4*j-3:4*j-2),2,2), 'color', plot_color)
@@ -139,17 +142,21 @@ else
             title(['Distance to Evader ', num2str(i)])
             xlabel('Time [s]')
             ylabel('Distance [m]')
+            legend('Capture Radius')
         end
     else
+        plot(t, capture_radius*ones(length(t)), 'k--')
+        hold on
         for i = 2:n
             plot(t, vecnorm(x(:,1:2) - x(:,4*i-3:4*i-2),2,2))
             hold on
+            grid on
         end
-        plot(t, capture_radius*ones(length(t)), 'k--')
         xlabel('Time [s]')
         ylabel('Distance [m]')
     end
 
+    legend('Capture Radius')
     title('Distance to Evader')
 
 

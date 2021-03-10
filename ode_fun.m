@@ -67,7 +67,7 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
 
             % Plot pursuer position and velocity (blue is pursuer)
             for i = ne+1:n
-%                 plot([x(4*i-3), x(4*i-3) + dx(4*i-3)], [x(4*i-2), x(4*i-2) + dx(4*i-2)], '--b');
+                plot([x(4*i-3), x(4*i-3) + dx(4*i-3)], [x(4*i-2), x(4*i-2) + dx(4*i-2)], '--b');
                 plot(x(4*i-3), x(4*i-2), 'ob', 'MarkerFaceColor', 'b', 'MarkerSize', 3);
                 
                 % For single evader
@@ -77,9 +77,10 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
 
             % Plot evader position and velocity (red is evader)
             for i = 1:ne
-%                 plot([x(4*i-3), x(4*i-3) + dx(4*i-3)], [x(4*i-2), x(4*i-2) + dx(4*i-2)], '--r');
+                if ~caught(i)
+                    plot([x(4*i-3), x(4*i-3) + dx(4*i-3)], [x(4*i-2), x(4*i-2) + dx(4*i-2)], '--r');
+                end
                 plot(x(4*i-3), x(4*i-2), 'or', 'MarkerFaceColor', 'r', 'MarkerSize', 3);
-                
                 % For single evader
 %                 plot([xy(inds_e(i),1), u_e(2*i-1)+xy(inds_e(i),1)], [xy(inds_e(i),2), u_e(2*i)+xy(inds_e(i),2)], '--r');
 %                 plot(xy(inds_e(i),1), xy(inds_e(i),2), 'or', 'MarkerFaceColor', 'r', 'MarkerSize', 3);
@@ -96,8 +97,8 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
             hold off
         end
 
-        global F;
-        F = [F; getframe(gcf)];
+%         global F;
+%         F = [F; getframe(gcf)];
     end
 %     t
 %     x;

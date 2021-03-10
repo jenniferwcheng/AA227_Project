@@ -80,9 +80,10 @@ for i=1:length(t_all)
 
     % Plot evader position and velocity (red is evader)
     for i = 1:ne
+        if ~caught(i)
         plot([x(4*i-3), x(4*i-3) + dx(4*i-3)], [x(4*i-2), x(4*i-2) + dx(4*i-2)], '--r');
+        end
         plot(x(4*i-3), x(4*i-2), 'or', 'MarkerFaceColor', 'r', 'MarkerSize', 3);
-
         % For single evader
 %                 plot([xy(inds_e(i),1), u_e(2*i-1)+xy(inds_e(i),1)], [xy(inds_e(i),2), u_e(2*i)+xy(inds_e(i),2)], '--r');
 %                 plot(xy(inds_e(i),1), xy(inds_e(i),2), 'or', 'MarkerFaceColor', 'r', 'MarkerSize', 3);
@@ -103,7 +104,7 @@ for i=1:length(t_all)
 end
 
 %% make video
-writerObj = VideoWriter('multiple_pursuers_test.avi');
+writerObj = VideoWriter('voronoi_video.avi');
 writerObj.FrameRate = 10;
 open(writerObj);
 % write the frames to the video
@@ -176,6 +177,8 @@ function [dx, inds_p, inds_e, xy, u_p, u_e, aug_pts] = ...
         dx(4*j-3:4*j-2) = u_e(2*i-1:2*i);
         j = j + 1;
     end
+    
+    checkIfCaught(t,x);
 end
 
 function u_e = evader_velocity(vertices, indices, xy, inds_e, save_video)
@@ -190,10 +193,8 @@ function u_e = evader_velocity(vertices, indices, xy, inds_e, save_video)
         Cvi = [Cvi_x, Cvi_y];
         xe = [xy(i,1), xy(i,2)];
         u_e = [u_e, ((Cvi - xe)/(norm(Cvi - xe) + eps))];  
-        if save_video
-            plot(Cvi(1), Cvi(2), 'xr', 'MarkerSize', 10)
-            hold on;
-        end
+        plot(Cvi(1), Cvi(2), 'xr', 'MarkerSize', 10)
+        hold on;
     end
     u_e = u_e';
 end
@@ -233,10 +234,8 @@ function u_p = pursuer_velocity(vertices, indices, xy, inds_p, inds_e, save_vide
             vertex_1 = vertices(nearest_edge(1), :);
             vertex_2 = vertices(nearest_edge(2), :);
             Cbj = .5*(vertex_1+vertex_2);
-            if save_video
-                plot(Cbj(1), Cbj(2), 'xb', 'MarkerSize', 10)
-                hold on;
-            end
+            plot(Cbj(1), Cbj(2), 'xb', 'MarkerSize', 10)
+            hold on;
             u_p = [u_p; ((Cbj - p_pos)/(norm(Cbj - p_pos) + eps))'];
 
         % If the pursuer has no neighboring evaders
@@ -290,3 +289,29 @@ function [v, c, augmented_points] = bounded_voronoi(lower, upper, points)
     %     plot([lower(1), lower(1), upper(1), upper(1)], [lower(2), upper(2), upper(2), lower(2)])
 end
 
+function [] = checkIfCaught(t,x)
+    % Update caught vector
+    global caught;
+    global np;
+    global ne;
+    capture_radius = 0.2; % [m]
+    
+    % Extract evader and pursuer locations
+    ex = x(1:4:4*ne);
+    ey = x(2:4:4*ne+1);
+    px = x(4*ne+1:4:end);
+    py = x(4*ne+2:4:end);
+    
+    % Check for each evader if there is a pursuer close to it
+    for i = 1:ne
+        if ~caught(i) % Only check for evaders that haven't been caught
+            for j = 1:np
+                r = norm([ex(i); ey(i)] - [px(j); py(j)]);
+                if r <= capture_radius % Check if there is a pursuer within capture radius
+                    caught(i) = 1;
+                    break
+                end
+            end
+        end
+    end
+end
