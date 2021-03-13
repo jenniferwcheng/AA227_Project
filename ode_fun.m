@@ -54,12 +54,13 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
             py = x(2:4:end);
             n = ne + np;
 
-            % Remove caught evaders (don't want to plot their cells)
-            for i = 1:ne
-                if caught(i)
-                    aug_pts(i,:) = [];
-                end
-            end
+            % Remove caught evaders (don't want to plot their cells) -
+            % DON'T do this... already did this in voronoi_fun
+%             for i = 1:ne
+%                 if caught(i)
+%                     aug_pts(i,:) = [];
+%                 end
+%             end
             
             % Plot bounded Voronoi cells
             voronoi(aug_pts(:, 1), aug_pts(:, 2), 'k');

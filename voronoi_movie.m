@@ -58,11 +58,11 @@ for i=1:length(t_all)
     n = ne + np;
 
     % Remove caught evaders (don't want to plot their cells)
-    for i = 1:ne
-        if caught(i)
-            aug_pts(i,:) = [];
-        end
-    end
+%     for i = 1:ne
+%         if caught(i)
+%             aug_pts(i,:) = [];
+%         end
+%     end
 
     % Plot bounded Voronoi cells
     voronoi(aug_pts(:, 1), aug_pts(:, 2), 'k');
