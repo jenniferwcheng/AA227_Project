@@ -348,7 +348,7 @@ function [dx] = potential_fun(t,x, vmax, amax, ne, np, grid_size)
     % Return the vectorized version of the derivative
     dX = zeros(dims, n);
     dX(1:2, :) = X(3:4, :); % Change position by the velocity
-    dX(3:4, :) = forces - 0.05*X(3:4, :); % Change velocity by the force - friction, assume m = 1 for all robots
+    dX(3:4, :) = forces; % Change velocity by the force - friction, assume m = 1 for all robots
     
     % Limit acceleration and velocities
     for i = 1:n
@@ -398,7 +398,7 @@ end
 % Force on pursuer at x1 given x1 is a pursuer, x2 is another pursuer
 function [force] = pursuer_pursuer_force(x1, x2)
     r = x2 - x1;
-    k = 1e-3; % tune this - need this to be small so that pursuers can surround evader
+    k = 0; % tune this - need this to be small so that pursuers can surround evader
     % If too small, pursuers will collide with each other
     eps = 1e-2;
     
