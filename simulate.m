@@ -4,7 +4,7 @@ clear all; close all; clc;
 %----Parameters-----------
 global ne;
 global np;
-ne = 1; % Number of evaders
+ne = 2; % Number of evaders
 np = 3; % Number of pursuers
 n = ne + np; % Total number of robots
 dim = 4; % Order of states
@@ -18,7 +18,7 @@ grid_size = 20; % [m] size of environment (length) -> area = grid_size^2
 global F; % For video
 
 % Flags
-method = 1; % 0 for potential, 1 for Voronoi
+method = 0; % 0 for potential, 1 for Voronoi
 save_video = 0; % 1 to plot in real time and save video
 monte_carlo = 0; % 1 - on, 0 - off
 
@@ -38,6 +38,7 @@ x0(4:dim:end) = 0; % zero acceleration
 
 % x0 = [0; 0; 0; 0; -4; -4; 0; 0; 4; 4; 0; 0; 5; -4; 0; 0; -4; 4; 0; 0]; % square
 % x0 = [0; 0; 0; 0; 6; 3; 0; 0; 5; 5; 0; 0];
+% x0 = [-5; -5; 0; 0; 5; 0; 0; 0; -5; -4; 0; 0; 4; 0; 0; 0; 6; 0; 0; 0];
 
 %-------Run ODE function---------------
 Opt = odeset('Events', @termEvent); % Terminate when within capture radius
@@ -128,13 +129,13 @@ else
     figure % Distance to evader 
     
     if ne > 1
+        plot_color = rand(np,3);
         for i = 1:ne
             subplot(ne,1,i)
             plot(t, capture_radius*ones(length(t)), 'k--')
             hold on
-            plot_color = rand(1,3);
             for j = ne+1:n
-                plot(t, vecnorm(x(:,4*i-3:4*i-2) - x(:,4*j-3:4*j-2),2,2), 'color', plot_color)
+                plot(t, vecnorm(x(:,4*i-3:4*i-2) - x(:,4*j-3:4*j-2),2,2), 'color', plot_color(j-ne,:))
                 hold on
                 grid on
             end

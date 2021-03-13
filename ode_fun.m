@@ -24,19 +24,14 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
     if save_video
         % Potential
         if method == 0 
-            % Plot evader (assume only 1)
-            plot(x(1), x(2), '.r', 'MarkerSize', 20) % Evader position
-            hold on
-%             plot([x(1) x(1)+dx(1)], [x(2) x(2)+dx(2)], '--r') % Evader velocity
-            
-            % Extract pursuer x and y locations (assume 1 evader)
-            plotx = x(5:4:end-1);
-            ploty = x(6:4:end);
-            
-            % Plot pursuers
-            for i = 1:length(plotx)
-                plot(plotx(i), ploty(i), '.b', 'MarkerSize', 20) % Pursuer locations
-%                 plot([plotx(i) plotx(i) + dx(4*i-3)], [ploty(i) ploty(i)+dx(4*i-2)], '--b') % Pursuer velocity
+            % Plot evader 
+            for i = 1:ne+np
+                if i <= ne
+                    plot(x(4*i-3), x(4*i-2), '.r', 'MarkerSize', 20) % Evader position
+                    hold on
+                else
+                    plot(x(4*i-3), x(4*i-2), '.b', 'MarkerSize', 20) % Pursuer locations
+                end
             end
             
             xlim([-grid_size/2 grid_size/2])
@@ -54,14 +49,6 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
             py = x(2:4:end);
             n = ne + np;
 
-            % Remove caught evaders (don't want to plot their cells) -
-            % DON'T do this... already did this in voronoi_fun
-%             for i = 1:ne
-%                 if caught(i)
-%                     aug_pts(i,:) = [];
-%                 end
-%             end
-            
             % Plot bounded Voronoi cells
             voronoi(aug_pts(:, 1), aug_pts(:, 2), 'k');
             hold on
@@ -70,10 +57,6 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
             for i = ne+1:n
                 plot([x(4*i-3), x(4*i-3) + dx(4*i-3)], [x(4*i-2), x(4*i-2) + dx(4*i-2)], '--b');
                 plot(x(4*i-3), x(4*i-2), 'ob', 'MarkerFaceColor', 'b', 'MarkerSize', 3);
-                
-                % For single evader
-%                 plot([xy(inds_p(i),1), u_p(2*i-1)+xy(inds_p(i),1)], [xy(inds_p(i),2), u_p(2*i)+xy(inds_p(i),2)], '--b');
-%                 plot(xy(inds_p(i),1), xy(inds_p(i),2), 'ob', 'MarkerFaceColor', 'b', 'MarkerSize', 3);
             end
 
             % Plot evader position and velocity (red is evader)
@@ -82,9 +65,6 @@ function dx = ode_fun(t, x, method, save_video, vmax, amax, ne, np, grid_size)
                     plot([x(4*i-3), x(4*i-3) + dx(4*i-3)], [x(4*i-2), x(4*i-2) + dx(4*i-2)], '--r');
                 end
                 plot(x(4*i-3), x(4*i-2), 'or', 'MarkerFaceColor', 'r', 'MarkerSize', 3);
-                % For single evader
-%                 plot([xy(inds_e(i),1), u_e(2*i-1)+xy(inds_e(i),1)], [xy(inds_e(i),2), u_e(2*i)+xy(inds_e(i),2)], '--r');
-%                 plot(xy(inds_e(i),1), xy(inds_e(i),2), 'or', 'MarkerFaceColor', 'r', 'MarkerSize', 3);
             end
 
             title('Robot Positions, Voronoi Cells, Velocity Directions');
@@ -296,14 +276,37 @@ function [dx] = potential_fun(t,x, vmax, amax, ne, np, grid_size)
     
     % Shape the state and derivative into
     % dims x num_robots matrices
+    global caught;
     dims = 4;
     n = ne + np;
     num_evaders = ne; 
-    num_pursuers = n - num_evaders;
+    num_pursuers = np;
    
     X = reshape(x, dims, n);
     forces = zeros(dims/2, n);
     wall_forces = zeros(dims/2, n);
+    
+    % Find closest evader
+    % Extract evader and pursuer locations
+    ex = x(1:4:4*ne);
+    ey = x(2:4:4*ne+1);
+    px = x(4*ne+1:4:end);
+    py = x(4*ne+2:4:end);
+    
+    % Find the nearest evader
+    closest = zeros(np, 1);
+    for i = 1:np
+        currClosest = Inf;
+        for j = 1:ne
+            if ~caught(j)
+                dist = norm([ex(j) ey(j)] - [px(i) py(i)]);
+                if dist < currClosest
+                    currClosest = dist;
+                    closest(i) = j;
+                end
+            end
+        end
+    end
     
     % Calculate the force for the ith robot
     for i = 1:n
@@ -320,15 +323,19 @@ function [dx] = potential_fun(t,x, vmax, amax, ne, np, grid_size)
                 if i <= num_evaders 
                     % Evader, evader
                     if j <= num_evaders
-                        forces(:, i) = forces(:, i) + evader_evader_force(x1, x2);
+                        if ~caught(j)
+                            forces(:, i) = forces(:, i) + evader_evader_force(x1, x2);
+                        end
                     % Evader, pursuer
                     else 
                         forces(:, i) = forces(:, i) + evader_pursuer_force(x1, x2);
                     end            
                 else
                     % Pursuer, evader
-                    if j <= num_evaders
-                        forces(:, i) = forces(:, i) + pursuer_evader_force(x1, x2);
+                    if j <= num_evaders 
+                        if ~caught(j) && j == closest(i-ne)
+                            forces(:, i) = forces(:, i) + pursuer_evader_force(x1, x2);
+                        end
                     % Pursuer, pursuer
                     else
                         forces(:, i) = forces(:, i) + pursuer_pursuer_force(x1, x2);
@@ -376,11 +383,16 @@ function [dx] = potential_fun(t,x, vmax, amax, ne, np, grid_size)
         end
     end
     
-    % Account for boundary
-%     dX(3:4, :) = dX(3:4,:) + wall_forces;
-    
     % Reshape into a vector 
     dx = dX(:);
+    
+    % If caught, don't move
+    for i = 1:ne
+        if caught(i)
+            dx(4*i-3:4*i) = zeros(4,1);
+            x(4*i-1:4*i) = zeros(2,1);
+        end
+    end
 end
 
 % Force on pursuer at x1 given x1 is a pursuer, x2 is another pursuer

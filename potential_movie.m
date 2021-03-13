@@ -4,8 +4,8 @@ clear all; close all; clc;
 %----Parameters-----------
 global ne;
 global np;
-ne = 1; % Number of evaders
-np = 4; % Number of pursuers
+ne = 2; % Number of evaders
+np = 3; % Number of pursuers
 n = ne + np; % Total number of robots
 dim = 4; % Order of states
 
@@ -27,14 +27,14 @@ t_end = 60; % [s] length of simulation time
 %----Initial conditions------
 
 % Random positions:
-x0 = grid_size/2*rand([n*dim,1]) - grid_size/4;
-x0(3:dim:end) = 0; % zero velocity
-x0(4:dim:end) = 0; % zero acceleration
+% x0 = grid_size/2*rand([n*dim,1]) - grid_size/4;
+% x0(3:dim:end) = 0; % zero velocity
+% x0(4:dim:end) = 0; % zero acceleration
 
 % x0 = [0; 0; 0; 0; -4; -4; 0; 0; 4; 4; 0; 0; 5; -4; 0; 0; -4; 4; 0; 0]; % square
 
 %% Run once with equi-spaced times
-% load('initial.mat')
+load('potential_initial_2.mat')
 tspan = 0:.1:t_end;
 Opt = odeset('Events', @termEvent); % Terminate when within capture radius
 [t_all, x_all] = ode23(@(t,x) ode_fun(t,x, method, save_video, vmax, amax, ne, np, grid_size),tspan, x0, Opt);
@@ -53,36 +53,31 @@ for i=1:length(t_all)
     x = x_all(i,:)';
     dx = potential_fun(t,x, vmax, amax, ne, np, grid_size);
 
-    % Plot evader (assume only 1)
-            plot(x(1), x(2), '.r', 'MarkerSize', 20) % Evader position
+	
+    for i = 1:ne+np
+        if i <= ne
+            plot(x(4*i-3), x(4*i-2), '.r', 'MarkerSize', 20) % Evader position
             hold on
-%             plot([x(1) x(1)+dx(1)], [x(2) x(2)+dx(2)], '--r') % Evader velocity
-            
-            % Extract pursuer x and y locations (assume 1 evader)
-            plotx = x(5:4:end-1);
-            ploty = x(6:4:end);
-            
-            % Plot pursuers
-            for i = 1:length(plotx)
-                plot(plotx(i), ploty(i), '.b', 'MarkerSize', 20) % Pursuer locations
-%                 plot([plotx(i) plotx(i) + dx(4*i-3)], [ploty(i) ploty(i)+dx(4*i-2)], '--b') % Pursuer velocity
-            end
-            
-            xlim([-grid_size/2 grid_size/2])
-            ylim([-grid_size/2 grid_size/2])
-            xlabel('x1 [m]')
-            ylabel('x2 [m]')
-            title('Current Position')
-            grid on
-            drawnow
-            hold off
+        else
+            plot(x(4*i-3), x(4*i-2), '.b', 'MarkerSize', 20) % Pursuer locations
+        end
+    end
+
+    xlim([-grid_size/2 grid_size/2])
+    ylim([-grid_size/2 grid_size/2])
+    xlabel('x1 [m]')
+    ylabel('x2 [m]')
+    title('Current Position')
+    grid on
+    drawnow
+    hold off
     
     global F;
     F = [F; getframe(gcf)];
 end
 
 %% make video
-writerObj = VideoWriter('multiple_pursuers_test.avi');
+writerObj = VideoWriter('potential_movie_2.avi');
 writerObj.FrameRate = 10;
 open(writerObj);
 % write the frames to the video
